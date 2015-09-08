@@ -12,6 +12,7 @@ namespace Metaco.Ledger.Tests
 		[Fact]
 		public void Test()
 		{
+            LedgerClient.GetLedgers();
 		}
 	}
 }
