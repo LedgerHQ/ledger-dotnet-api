@@ -64,7 +64,16 @@ namespace Metaco.Ledger
         {
             get
             {
-                return _Transport = _Transport ?? new BTChipTransport(_Device);
+                _Transport = _Transport ?? new BTChipTransport(_Device);
+                if(!_Device.IsConnected)
+                {
+                    throw new BTChipException("The device is not connected");
+                }
+                if(!_Device.IsOpen)
+                {
+                    throw new BTChipException("Error while opening the device");
+                }
+                return _Transport;
             }
         }
 
@@ -138,15 +147,33 @@ namespace Metaco.Ledger
 
 
 
-        public BTChipFirmware GetFirmwareVersion()
+
+
+        private byte[] ToArray(byte[] bytes)
         {
-            byte[] response = ExchangeApdu(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_GET_FIRMWARE_VERSION, (byte)0x00, (byte)0x00, 0x00, OK);
-            return new BTChipFirmware(response);
+            return new byte[] { (byte)bytes.Length }.Concat(bytes).ToArray();
         }
 
 
         private byte[] ExchangeApdu(byte cla, byte ins, byte p1, byte p2, byte[] data, int[] acceptedSW)
         {
+            int sw;
+            var response = ExchangeApdu(cla, ins, p1, p2, data, out sw);
+            CheckSW(acceptedSW, sw);
+            return response;
+        }
+
+        private static void CheckSW(int[] acceptedSW, int sw)
+        {
+            if(!acceptedSW.Contains(sw))
+            {
+                throw new BTChipException(sw);
+            }
+        }
+
+        private byte[] ExchangeApdu(byte cla, byte ins, byte p1, byte p2, byte[] data, out int sw)
+        {
+            sw = 0;
             byte[] apdu = new byte[data.Length + 5];
             apdu[0] = cla;
             apdu[1] = ins;
@@ -154,7 +181,7 @@ namespace Metaco.Ledger
             apdu[3] = p2;
             apdu[4] = (byte)(data.Length);
             Array.Copy(data, 0, apdu, 5, data.Length);
-            return ExchangeCheck(apdu, acceptedSW);
+            return Exchange(apdu, out sw);
         }
         private byte[] ExchangeApdu(byte cla, byte ins, byte p1, byte p2, int length, int[] acceptedSW)
         {
@@ -162,40 +189,98 @@ namespace Metaco.Ledger
             {
                 cla,ins,p1,p2,(byte)length
             };
-            return ExchangeCheck(apdu, acceptedSW);
+            return ExchangeApdu(apdu, acceptedSW);
         }
 
-        private byte[] ExchangeCheck(byte[] apdu, int[] acceptedSW)
+        private byte[] ExchangeApdu(byte[] apdu, int[] acceptedSW)
         {
-            int lastSW;
-            byte[] response = Exchange(apdu, out lastSW);
-            if(acceptedSW == null)
-            {
-                return response;
-            }
-            foreach(int SW in acceptedSW)
-            {
-                if(lastSW == SW)
-                {
-                    return response;
-                }
-            }
-            throw new BTChipException("Invalid status", lastSW);
+            int sw;
+            var resp = Exchange(apdu, out sw);
+            CheckSW(acceptedSW, sw);
+            return resp;
         }
 
         private byte[] Exchange(byte[] apdu, out int sw)
         {
             byte[] response = Transport.Exchange(apdu);
+            if(response == null)
+                throw new BTChipException("Error while transmission");
             if(response.Length < 2)
             {
                 throw new BTChipException("Truncated response");
             }
             sw = ((int)(response[response.Length - 2] & 0xff) << 8) |
                     (int)(response[response.Length - 1] & 0xff);
+            if(sw == 0x6faa)
+                throw new BTChipException(sw);
             byte[] result = new byte[response.Length - 2];
             Array.Copy(response, 0, result, 0, response.Length - 2);
             return result;
         }
+
+
+        public BTChipFirmware GetFirmwareVersion()
+        {
+            byte[] response = ExchangeApdu(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_GET_FIRMWARE_VERSION, (byte)0x00, (byte)0x00, 0x00, OK);
+            return new BTChipFirmware(response);
+        }
+
+        public bool VerifyPin(string pin, out int remaining)
+        {
+            int lastSW;
+            remaining = 3;
+            var response = ExchangeApdu(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_VERIFY_PIN, 0, 0, Encoding.ASCII.GetBytes(pin), out lastSW);
+            if(lastSW == BTChipConstants.SW_OK)
+                return true;
+            remaining = (lastSW & 0x0F);
+            return false;
+        }
+        public int GetRemainingAttempts()
+        {
+            int lastSW;
+            var response = ExchangeApdu(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_VERIFY_PIN, 0x80, 0, new byte[] { 1 }, out lastSW);
+            return (lastSW & 0x0F);
+        }
+
+        public bool VerifyPin(string pin)
+        {
+            int remain;
+            return VerifyPin(pin, out remain);
+        }
+
+        public OperationMode GetOperationMode()
+        {
+            var response = ExchangeApdu(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_GET_OPERATION_MODE, 0, 0, 0, OK);
+            return (OperationMode)response[0];
+        }
+
+        public SecondFactorMode GetSecondFactorMode()
+        {
+            var response = ExchangeApdu(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_GET_OPERATION_MODE, 1, 0, 0, OK);
+            return (SecondFactorMode)response[0];
+        }
+
+        public void SetOperationMode(OperationMode value)
+        {
+            ExchangeApdu(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_SET_OPERATION_MODE, 0, 0, new[]{ (byte)value }, OK);
+        }
+    }
+
+    
+    public enum SecondFactorMode
+    {
+        Keyboard = 0x11,
+        SecurityCard = 0x12,
+        SecurityCardAndSecureScreen = 0x13,
+    }
+
+    
+    public enum OperationMode
+    {
+        Standard = 0x01,
+        Relaxed = 0x02,
+        Server = 0x04,
+        Developer = 0x08
     }
 
     [Flags]
