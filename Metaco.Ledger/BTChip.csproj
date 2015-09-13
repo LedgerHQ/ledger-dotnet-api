@@ -7,8 +7,8 @@
     <ProjectGuid>{4F5E5ED8-64DD-4CA9-87A8-CA8977FF35A5}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Metaco.Ledger</RootNamespace>
-    <AssemblyName>Metaco.Ledger</AssemblyName>
+    <RootNamespace>BTChip</RootNamespace>
+    <AssemblyName>BTChip</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>

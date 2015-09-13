@@ -1,4 +1,4 @@
-﻿using Metaco.Ledger.SetupApi.DeviceInstallation;
+﻿using BTChip.SetupApi.DeviceInstallation;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -7,7 +7,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Metaco.Ledger
+namespace BTChip
 {
     /// <summary>
     /// Override WndProc in your form and call the ProcessWindowsMessage method.

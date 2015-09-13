@@ -5,11 +5,11 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("Metaco.Ledger")]
+[assembly: AssemblyTitle("BTChip")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Microsoft")]
-[assembly: AssemblyProduct("Metaco.Ledger")]
+[assembly: AssemblyProduct("BTChip")]
 [assembly: AssemblyCopyright("Copyright © Microsoft 2015")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
@@ -21,7 +21,7 @@ using System.Runtime.InteropServices;
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
 [assembly: Guid("3c72af09-2860-448a-aad3-3ec7868ed2e5")]
-[assembly: InternalsVisibleTo("Metaco.Ledger.Tests")]
+[assembly: InternalsVisibleTo("BTChip.Tests")]
 
 // Version information for an assembly consists of the following four values:
 //

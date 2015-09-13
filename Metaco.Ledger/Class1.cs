@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Metaco.Ledger
+namespace BTChip
 {
     public class Class1
     {

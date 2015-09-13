@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices;
-using Metaco.Ledger.SetupApi.DeviceInstallation;
+using BTChip.SetupApi.DeviceInstallation;
 
-namespace Metaco.Ledger
+namespace BTChip
 {
     namespace SetupApi.DeviceInstallation
     {
@@ -158,10 +158,10 @@ namespace Metaco.Ledger
             [DllImport(@"setupapi.dll", CharSet = CharSet.Auto, SetLastError = true)]
             private static extern Boolean SetupDiEnumDeviceInterfaces(
                                           IntPtr hDevInfo,
-                                          ref Metaco.Ledger.USBClass.Win32Wrapper.SP_DEVINFO_DATA devInfo,
+                                          ref BTChip.USBClass.Win32Wrapper.SP_DEVINFO_DATA devInfo,
                                           ref Guid interfaceClassGuid,
                                           UInt32 memberIndex,
-                                          ref Metaco.Ledger.USBClass.Win32Wrapper.SP_DEVICE_INTERFACE_DATA deviceInterfaceData
+                                          ref BTChip.USBClass.Win32Wrapper.SP_DEVICE_INTERFACE_DATA deviceInterfaceData
                                     );
             private SafeDeviceInfoListHandle handle;
 

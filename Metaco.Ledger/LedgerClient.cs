@@ -13,7 +13,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Metaco.Ledger
+namespace BTChip
 {
     public class LedgerClient
     {
@@ -94,8 +94,8 @@ namespace Metaco.Ledger
             //var ledgers = array
             //    .Select(i =>
             //    {
-            //        Metaco.Ledger.Putin.RID_DEVICE_INFO info = new Putin.RID_DEVICE_INFO();
-            //        info.cbSize = Marshal.SizeOf(typeof(Metaco.Ledger.Putin.RID_DEVICE_INFO));
+            //        BTChip.Putin.RID_DEVICE_INFO info = new Putin.RID_DEVICE_INFO();
+            //        info.cbSize = Marshal.SizeOf(typeof(BTChip.Putin.RID_DEVICE_INFO));
             //        uint size = 0;
             //        Putin.GetRawInputDeviceInfo(i.hDevice, 0x2000000bU, &info, ref size);
             //        Putin.GetRawInputDeviceInfo(i.hDevice, 0x2000000bU, &info, ref size);

@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Xunit;
 
-namespace Metaco.Ledger.Tests
+namespace BTChip.Tests
 {
     public class Class1
     {

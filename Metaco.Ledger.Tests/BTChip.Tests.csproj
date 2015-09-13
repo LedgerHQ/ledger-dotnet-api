@@ -9,8 +9,8 @@
     <ProjectGuid>{1F622FB6-1477-4CFE-B7C5-F3A2CF359FCD}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Metaco.Ledger.Tests</RootNamespace>
-    <AssemblyName>Metaco.Ledger.Tests</AssemblyName>
+    <RootNamespace>BTChip.Tests</RootNamespace>
+    <AssemblyName>BTChip.Tests</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
@@ -54,9 +54,9 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Metaco.Ledger\Metaco.Ledger.csproj">
+    <ProjectReference Include="..\Metaco.Ledger\BTChip.csproj">
       <Project>{4f5e5ed8-64dd-4ca9-87a8-ca8977ff35a5}</Project>
-      <Name>Metaco.Ledger</Name>
+      <Name>BTChip</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
