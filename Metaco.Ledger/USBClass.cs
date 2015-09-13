@@ -512,12 +512,12 @@ namespace Metaco.Ledger
                 private IntPtr reserved;
             }
 
-            [StructLayout(LayoutKind.Sequential, Pack = 1)]
-            public struct SP_DEVICE_INTERFACE_DETAIL_DATA
+            [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
+            public struct SP_DEVICE_INTERFACE_DETAIL_DATA // user made struct to store device path
             {
                 public UInt32 cbSize;
                 [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 256)]
-                public string devicePath;
+                public string DevicePath;
             }
 
             [StructLayout(LayoutKind.Explicit)]
@@ -702,13 +702,13 @@ namespace Metaco.Ledger
             /// <param name="deviceInfoData">Output</param>
             /// <returns></returns>
             [DllImport(@"setupapi.dll", CharSet = CharSet.Auto, SetLastError = true)]
-            public static extern Boolean SetupDiGetDeviceInterfaceDetail(
+            public unsafe static extern Boolean SetupDiGetDeviceInterfaceDetail(
                IntPtr hDevInfo,
-               ref SP_DEVICE_INTERFACE_DATA deviceInterfaceData, //ref
-               ref SP_DEVICE_INTERFACE_DETAIL_DATA deviceInterfaceDetailData,
+                SP_DEVICE_INTERFACE_DATA* deviceInterfaceData,
+                ref SP_DEVICE_INTERFACE_DETAIL_DATA deviceInterfaceDetailData,
                UInt32 deviceInterfaceDetailDataSize,
-               out UInt32 requiredSize,
-               ref SP_DEVINFO_DATA deviceInfoData
+               UInt32* requiredSize,
+                SP_DEVINFO_DATA* deviceInfoData
             );
 
 
@@ -1013,6 +1013,7 @@ namespace Metaco.Ledger
             public string DevicePhysicalObjectName;
             public string COMPort;
             public string HardwareId;
+            public string MappedDevicePath;
         }
 
 
@@ -1037,7 +1038,6 @@ namespace Metaco.Ledger
             IntPtr IntPtrBuffer = Marshal.AllocHGlobal(BUFFER_SIZE);
             IntPtr h = IntPtr.Zero;
             Win32Wrapper.WinErrors LastError;
-            DeviceProperties DP = new DeviceProperties();
             //bool Status = false;
             List<DeviceProperties> result = new List<DeviceProperties>();
             try
@@ -1046,7 +1046,9 @@ namespace Metaco.Ledger
                 string ExpectedDeviceID = String.Empty;
                 string ExpectedInterfaceID = String.Empty;
 
-                h = Win32Wrapper.SetupDiGetClassDevs(null, null, IntPtr.Zero, (int)(Win32Wrapper.DIGCF.DIGCF_PRESENT | Win32Wrapper.DIGCF.DIGCF_ALLCLASSES));
+                var interfaceClassGuid = Guid.Parse("4D1E55B2-F16F-11CF-88CB-001111000030");
+
+                h = Win32Wrapper.SetupDiGetClassDevs(&interfaceClassGuid, null, IntPtr.Zero, (int)(Win32Wrapper.DIGCF.DIGCF_PRESENT | Win32Wrapper.DIGCF.DIGCF_DEVICEINTERFACE));
                 if(h.ToInt32() != INVALID_HANDLE_VALUE)
                 {
                     bool Success = true;
@@ -1055,129 +1057,125 @@ namespace Metaco.Ledger
                     {
                         if(Success)
                         {
-                            UInt32 RequiredSize = 0;
-                            UInt32 RegType = 0;
-                            IntPtr Ptr = IntPtr.Zero;
-
-                            //Create a Device Info Data structure
-                            Win32Wrapper.SP_DEVINFO_DATA DevInfoData = new Win32Wrapper.SP_DEVINFO_DATA();
-                            DevInfoData.cbSize = (uint)Marshal.SizeOf(DevInfoData);
-                            Success = Win32Wrapper.SetupDiEnumDeviceInfo(h, i, &DevInfoData);
-
                             Win32Wrapper.SP_DEVICE_INTERFACE_DATA interfaceData = new Win32Wrapper.SP_DEVICE_INTERFACE_DATA();
                             interfaceData.cbSize = (uint)Marshal.SizeOf(interfaceData);
+                            Success = Win32Wrapper.SetupDiEnumDeviceInterfaces(h, null, &interfaceClassGuid, i, &interfaceData);
 
-                            if(Win32Wrapper.SetupDiEnumDeviceInterfaces(h, &DevInfoData, null, 0, &interfaceData))
-                            {
-                            }
+                            var details = new Win32Wrapper.SP_DEVICE_INTERFACE_DETAIL_DATA();
+                            details.cbSize = IntPtr.Size == 4 ? 6U : 8U;
 
+                            Success = Win32Wrapper.SetupDiGetDeviceInterfaceDetail(h, &interfaceData, ref details, 250, null, null);
 
-                            int err = Marshal.GetLastWin32Error();
-                            if(Marshal.GetLastWin32Error() != 0x103)
-                            {
-                            }
                             if(Success)
                             {
-                                //Get the required buffer size
-                                //First query for the size of the Hardware ID, so we know the size of the needed buffer to allocate to store the data.
-                                Win32Wrapper.SetupDiGetDeviceRegistryProperty(h, ref DevInfoData, (UInt32)Win32Wrapper.SPDRP.SPDRP_HARDWAREID, ref RegType, IntPtr.Zero, 0, ref RequiredSize);
+                                UInt32 RequiredSize = 0;
+                                UInt32 RegType = 0;
+                                IntPtr Ptr = IntPtr.Zero;
 
-                                //Win32Wrapper.SP_DEVICE_INTERFACE_DETAIL_DATA details = new Win32Wrapper.SP_DEVICE_INTERFACE_DETAIL_DATA();
-                                //details.cbSize = (uint)Marshal.SizeOf(details);
-
-                                //Win32Wrapper.SP_DEVICE_INTERFACE_DETAIL_DATA details = details(;
-
-                                //Win32Wrapper.SP_DEVICE_INTERFACE_DATA data = new Win32Wrapper.SP_DEVICE_INTERFACE_DATA();
-                                //data.cbSize = (uint)Marshal.SizeOf(data);
-
-                                //int size = 0;
-                                // Win32Wrapper.SP_DEVINFO_DATA deviceInfoData = null;
-                                //Win32Wrapper.SetupDiGetDeviceInterfaceDetail(h, ref data, ref details, 0, out size, ref deviceInfoData);
-
-                                LastError = (Win32Wrapper.WinErrors)Marshal.GetLastWin32Error();
-                                if(LastError == Win32Wrapper.WinErrors.ERROR_INSUFFICIENT_BUFFER)
+                                //Create a Device Info Data structure
+                                Win32Wrapper.SP_DEVINFO_DATA DevInfoData = new Win32Wrapper.SP_DEVINFO_DATA();
+                                DevInfoData.cbSize = (uint)Marshal.SizeOf(DevInfoData);
+                                Success = Win32Wrapper.SetupDiEnumDeviceInfo(h, i, &DevInfoData);
+                                if(Success)
                                 {
-                                    /*if (RequiredSize > BUFFER_SIZE)
+                                    //Get the required buffer size
+                                    //First query for the size of the Hardware ID, so we know the size of the needed buffer to allocate to store the data.
+                                    Win32Wrapper.SetupDiGetDeviceRegistryProperty(h, ref DevInfoData, (UInt32)Win32Wrapper.SPDRP.SPDRP_HARDWAREID, ref RegType, IntPtr.Zero, 0, ref RequiredSize);
+
+                                    //Win32Wrapper.SP_DEVICE_INTERFACE_DETAIL_DATA details = new Win32Wrapper.SP_DEVICE_INTERFACE_DETAIL_DATA();
+                                    //details.cbSize = (uint)Marshal.SizeOf(details);
+
+                                    //Win32Wrapper.SP_DEVICE_INTERFACE_DETAIL_DATA details = details(;
+
+                                    //Win32Wrapper.SP_DEVICE_INTERFACE_DATA data = new Win32Wrapper.SP_DEVICE_INTERFACE_DATA();
+                                    //data.cbSize = (uint)Marshal.SizeOf(data);
+
+                                    //int size = 0;
+                                    // Win32Wrapper.SP_DEVINFO_DATA deviceInfoData = null;
+                                    //Win32Wrapper.SetupDiGetDeviceInterfaceDetail(h, ref data, ref details, 0, out size, ref deviceInfoData);
+
+                                    LastError = (Win32Wrapper.WinErrors)Marshal.GetLastWin32Error();
+                                    if(LastError == Win32Wrapper.WinErrors.ERROR_INSUFFICIENT_BUFFER)
                                     {
-                                        Status = false;
-                                    }
-                                    else*/
-                                    if(RequiredSize <= BUFFER_SIZE)
-                                    {
-                                        if(Win32Wrapper.SetupDiGetDeviceRegistryProperty(h, ref DevInfoData, (UInt32)Win32Wrapper.SPDRP.SPDRP_HARDWAREID, ref RegType, IntPtrBuffer, BUFFER_SIZE, ref RequiredSize))
+                                        DeviceProperties DP = new DeviceProperties();
+                                        DP.MappedDevicePath = details.DevicePath;
+                                        if(RequiredSize <= BUFFER_SIZE)
                                         {
-                                            string HardwareID = Marshal.PtrToStringAuto(IntPtrBuffer);
-                                            HardwareID = HardwareID.ToLowerInvariant();
-                                            DP.HardwareId = HardwareID;
-
-                                            //Status = true; //Found device
-
-                                            DP.FriendlyName = String.Empty;
-                                            if(Win32Wrapper.SetupDiGetDeviceRegistryProperty(h, ref DevInfoData, (UInt32)Win32Wrapper.SPDRP.SPDRP_FRIENDLYNAME, ref RegType, IntPtrBuffer, BUFFER_SIZE, ref RequiredSize))
+                                            if(Win32Wrapper.SetupDiGetDeviceRegistryProperty(h, ref DevInfoData, (UInt32)Win32Wrapper.SPDRP.SPDRP_HARDWAREID, ref RegType, IntPtrBuffer, BUFFER_SIZE, ref RequiredSize))
                                             {
-                                                DP.FriendlyName = Marshal.PtrToStringAuto(IntPtrBuffer);
-                                            }
+                                                string HardwareID = Marshal.PtrToStringAuto(IntPtrBuffer);
+                                                HardwareID = HardwareID.ToLowerInvariant();
+                                                DP.HardwareId = HardwareID;
 
-                                            DP.DeviceType = String.Empty;
-                                            if(Win32Wrapper.SetupDiGetDeviceRegistryProperty(h, ref DevInfoData, (UInt32)Win32Wrapper.SPDRP.SPDRP_DEVTYPE, ref RegType, IntPtrBuffer, BUFFER_SIZE, ref RequiredSize))
-                                            {
-                                                DP.DeviceType = Marshal.PtrToStringAuto(IntPtrBuffer);
-                                            }
+                                                //Status = true; //Found device
 
-                                            DP.DeviceClass = String.Empty;
-                                            if(Win32Wrapper.SetupDiGetDeviceRegistryProperty(h, ref DevInfoData, (UInt32)Win32Wrapper.SPDRP.SPDRP_CLASS, ref RegType, IntPtrBuffer, BUFFER_SIZE, ref RequiredSize))
-                                            {
-                                                DP.DeviceClass = Marshal.PtrToStringAuto(IntPtrBuffer);
-                                            }
+                                                DP.FriendlyName = String.Empty;
+                                                if(Win32Wrapper.SetupDiGetDeviceRegistryProperty(h, ref DevInfoData, (UInt32)Win32Wrapper.SPDRP.SPDRP_FRIENDLYNAME, ref RegType, IntPtrBuffer, BUFFER_SIZE, ref RequiredSize))
+                                                {
+                                                    DP.FriendlyName = Marshal.PtrToStringAuto(IntPtrBuffer);
+                                                }
 
-                                            DP.DeviceManufacturer = String.Empty;
-                                            if(Win32Wrapper.SetupDiGetDeviceRegistryProperty(h, ref DevInfoData, (UInt32)Win32Wrapper.SPDRP.SPDRP_MFG, ref RegType, IntPtrBuffer, BUFFER_SIZE, ref RequiredSize))
-                                            {
-                                                DP.DeviceManufacturer = Marshal.PtrToStringAuto(IntPtrBuffer);
-                                            }
+                                                DP.DeviceType = String.Empty;
+                                                if(Win32Wrapper.SetupDiGetDeviceRegistryProperty(h, ref DevInfoData, (UInt32)Win32Wrapper.SPDRP.SPDRP_DEVTYPE, ref RegType, IntPtrBuffer, BUFFER_SIZE, ref RequiredSize))
+                                                {
+                                                    DP.DeviceType = Marshal.PtrToStringAuto(IntPtrBuffer);
+                                                }
 
-                                            DP.DeviceLocation = String.Empty;
-                                            if(Win32Wrapper.SetupDiGetDeviceRegistryProperty(h, ref DevInfoData, (UInt32)Win32Wrapper.SPDRP.SPDRP_LOCATION_INFORMATION, ref RegType, IntPtrBuffer, BUFFER_SIZE, ref RequiredSize))
-                                            {
-                                                DP.DeviceLocation = Marshal.PtrToStringAuto(IntPtrBuffer);
-                                            }
+                                                DP.DeviceClass = String.Empty;
+                                                if(Win32Wrapper.SetupDiGetDeviceRegistryProperty(h, ref DevInfoData, (UInt32)Win32Wrapper.SPDRP.SPDRP_CLASS, ref RegType, IntPtrBuffer, BUFFER_SIZE, ref RequiredSize))
+                                                {
+                                                    DP.DeviceClass = Marshal.PtrToStringAuto(IntPtrBuffer);
+                                                }
 
-                                            DP.DevicePath = String.Empty;
-                                            if(Win32Wrapper.SetupDiGetDeviceRegistryProperty(h, ref DevInfoData, (UInt32)Win32Wrapper.SPDRP.SPDRP_LOCATION_PATHS, ref RegType, IntPtrBuffer, BUFFER_SIZE, ref RequiredSize))
-                                            {
-                                                DP.DevicePath = Marshal.PtrToStringAuto(IntPtrBuffer);
-                                            }
+                                                DP.DeviceManufacturer = String.Empty;
+                                                if(Win32Wrapper.SetupDiGetDeviceRegistryProperty(h, ref DevInfoData, (UInt32)Win32Wrapper.SPDRP.SPDRP_MFG, ref RegType, IntPtrBuffer, BUFFER_SIZE, ref RequiredSize))
+                                                {
+                                                    DP.DeviceManufacturer = Marshal.PtrToStringAuto(IntPtrBuffer);
+                                                }
 
-                                            DP.DevicePhysicalObjectName = String.Empty;
-                                            if(Win32Wrapper.SetupDiGetDeviceRegistryProperty(h, ref DevInfoData, (UInt32)Win32Wrapper.SPDRP.SPDRP_PHYSICAL_DEVICE_OBJECT_NAME, ref RegType, IntPtrBuffer, BUFFER_SIZE, ref RequiredSize))
-                                            {
-                                                DP.DevicePhysicalObjectName = Marshal.PtrToStringAuto(IntPtrBuffer);
-                                            }
+                                                DP.DeviceLocation = String.Empty;
+                                                if(Win32Wrapper.SetupDiGetDeviceRegistryProperty(h, ref DevInfoData, (UInt32)Win32Wrapper.SPDRP.SPDRP_LOCATION_INFORMATION, ref RegType, IntPtrBuffer, BUFFER_SIZE, ref RequiredSize))
+                                                {
+                                                    DP.DeviceLocation = Marshal.PtrToStringAuto(IntPtrBuffer);
+                                                }
 
-                                            DP.DeviceDescription = String.Empty;
-                                            if(Win32Wrapper.SetupDiGetDeviceRegistryProperty(h, ref DevInfoData, (UInt32)Win32Wrapper.SPDRP.SPDRP_DEVICEDESC, ref RegType, IntPtrBuffer, BUFFER_SIZE, ref RequiredSize))
-                                            {
-                                                DP.DeviceDescription = Marshal.PtrToStringAuto(IntPtrBuffer);
-                                            }
+                                                DP.DevicePath = String.Empty;
+                                                if(Win32Wrapper.SetupDiGetDeviceRegistryProperty(h, ref DevInfoData, (UInt32)Win32Wrapper.SPDRP.SPDRP_LOCATION_PATHS, ref RegType, IntPtrBuffer, BUFFER_SIZE, ref RequiredSize))
+                                                {
+                                                    DP.DevicePath = Marshal.PtrToStringAuto(IntPtrBuffer);
+                                                }
 
-                                            DP.COMPort = String.Empty;
-                                            result.Add(DP);
-                                            //break;
-                                            //else
-                                            //{
-                                            //    Status = false;
-                                            //} 
-                                        }
-                                    } //End of if (RequiredSize <= BUFFER_SIZE) //if (RequiredSize > BUFFER_SIZE)
-                                } //End of if (LastError == Win32Wrapper.WinErrors.ERROR_INSUFFICIENT_BUFFER)
+                                                DP.DevicePhysicalObjectName = String.Empty;
+                                                if(Win32Wrapper.SetupDiGetDeviceRegistryProperty(h, ref DevInfoData, (UInt32)Win32Wrapper.SPDRP.SPDRP_PHYSICAL_DEVICE_OBJECT_NAME, ref RegType, IntPtrBuffer, BUFFER_SIZE, ref RequiredSize))
+                                                {
+                                                    DP.DevicePhysicalObjectName = Marshal.PtrToStringAuto(IntPtrBuffer);
+                                                }
+
+                                                DP.DeviceDescription = String.Empty;
+                                                if(Win32Wrapper.SetupDiGetDeviceRegistryProperty(h, ref DevInfoData, (UInt32)Win32Wrapper.SPDRP.SPDRP_DEVICEDESC, ref RegType, IntPtrBuffer, BUFFER_SIZE, ref RequiredSize))
+                                                {
+                                                    DP.DeviceDescription = Marshal.PtrToStringAuto(IntPtrBuffer);
+                                                }
+
+                                                DP.COMPort = String.Empty;
+                                                result.Add(DP);
+                                                //break;
+                                                //else
+                                                //{
+                                                //    Status = false;
+                                                //} 
+                                            }
+                                        } //End of if (RequiredSize <= BUFFER_SIZE) //if (RequiredSize > BUFFER_SIZE)
+                                    } //End of if (LastError == Win32Wrapper.WinErrors.ERROR_INSUFFICIENT_BUFFER)
+                                } // End of if (Success)
                             } // End of if (Success)
-                        } // End of if (Success)
-                        else
-                        {
-                            LastError = (Win32Wrapper.WinErrors)Marshal.GetLastWin32Error();
-                            //Status = false;
+                            else
+                            {
+                                LastError = (Win32Wrapper.WinErrors)Marshal.GetLastWin32Error();
+                                //Status = false;
+                            }
+                            i++;
                         }
-                        i++;
                     } // End of while (Success)
                 } //End of if (h.ToInt32() != INVALID_HANDLE_VALUE)
 
