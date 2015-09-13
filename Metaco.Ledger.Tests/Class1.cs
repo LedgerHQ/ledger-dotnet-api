@@ -15,6 +15,8 @@ namespace Metaco.Ledger.Tests
             var ledger = LedgerClient.GetLedgers().FirstOrDefault();
             Assert.NotNull(ledger);
             var firmware = ledger.GetFirmwareVersion();
+            Assert.NotNull(firmware);
+            Assert.True(firmware.ToString().Contains("Loader"));
         }
 
     }

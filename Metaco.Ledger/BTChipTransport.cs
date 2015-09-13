@@ -147,7 +147,7 @@ namespace Metaco.Ledger
         const int PID_LEDGER_PROTON = 0x4b7c;
         const int HID_BUFFER_SIZE = 64;
         const int SW1_DATA_AVAILABLE = 0x61;
-        const int DEFAULT_LEDGER_CHANNEL = 1;
+        const int DEFAULT_LEDGER_CHANNEL = 0x0101;
         const int LEDGER_HID_PACKET_SIZE = 64;
         const int TIMEOUT = 20000;
 
@@ -169,6 +169,7 @@ namespace Metaco.Ledger
                 return -1;
             }
             outputLength -= 7;
+            offsetOut++; //Skip first
             output[offsetOut++] = (byte)((channel >> 8) & 0xff);
             output[offsetOut++] = (byte)(channel & 0xff);
             output[offsetOut++] = (byte)TAG_APDU;
@@ -238,6 +239,7 @@ namespace Metaco.Ledger
             uint offsetOut = 0;
             uint responseLength;
             uint blockSize;
+            offset++; //Skip first
             if((data == null) || (dataLength < 7 + 5))
             {
                 return 0;

@@ -141,11 +141,7 @@ namespace Metaco.Ledger
         public BTChipFirmware GetFirmwareVersion()
         {
             byte[] response = ExchangeApdu(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_GET_FIRMWARE_VERSION, (byte)0x00, (byte)0x00, 0x00, OK);
-            bool compressedKeys = (response[0] == (byte)0x01);
-            int major = ((int)(response[1] & 0xff) << 8) | ((int)(response[2] & 0xff));
-            int minor = (int)(response[3] & 0xff);
-            int patch = (int)(response[4] & 0xff);
-            return new BTChipFirmware(major, minor, patch, compressedKeys);
+            return new BTChipFirmware(response);
         }
 
 
@@ -202,21 +198,104 @@ namespace Metaco.Ledger
         }
     }
 
+    [Flags]
+    public enum FirmwareFeatures : byte
+    {
+        Compressed = 0x01,
+        SecureElementUI = 0x02,
+        ExternalUI = 0x04,
+        NFC = 0x08,
+        BLE = 0x10,
+        TrustedEnvironmentExecution = 0x20
+    }
+
+
+    //https://ledgerhq.github.io/btchip-doc/bitcoin-technical.html#_get_firmware_version
     public class BTChipFirmware
     {
-        private int major;
-        private int minor;
-        private int patch;
-        private bool compressedKeys;
-
         public BTChipFirmware(int major, int minor, int patch, bool compressedKeys)
         {
-            // TODO: Complete member initialization
-            this.major = major;
-            this.minor = minor;
-            this.patch = patch;
-            this.compressedKeys = compressedKeys;
+
         }
 
+        public BTChipFirmware(byte[] bytes)
+        {
+            _Features = (FirmwareFeatures)(bytes[0] & ~0xC0);
+            _Architecture = bytes[1];
+            _Major = bytes[2];
+            _Minor = bytes[3];
+            _Patch = bytes[4];
+            _LoaderMinor = bytes[5];
+            _LoaderMajor = bytes[6];
+        }
+
+        private readonly FirmwareFeatures _Features;
+        public FirmwareFeatures Features
+        {
+            get
+            {
+                return _Features;
+            }
+        }
+
+        private readonly byte _Architecture;
+        public byte Architecture
+        {
+            get
+            {
+                return _Architecture;
+            }
+        }
+
+        private readonly byte _Major;
+        public byte Major
+        {
+            get
+            {
+                return _Major;
+            }
+        }
+
+        private readonly byte _Minor;
+        public byte Minor
+        {
+            get
+            {
+                return _Minor;
+            }
+        }
+
+        private readonly byte _Patch;
+        public byte Patch
+        {
+            get
+            {
+                return _Patch;
+            }
+        }
+
+
+        private readonly byte _LoaderMajor;
+        public byte LoaderMajor
+        {
+            get
+            {
+                return _LoaderMajor;
+            }
+        }
+
+        private readonly byte _LoaderMinor;
+        public byte LoaderMinor
+        {
+            get
+            {
+                return _LoaderMinor;
+            }
+        }
+
+        public string ToString()
+        {
+            return (Architecture != 0 ? "Ledger " : "") + string.Format("{0}.{1}.{2} (Loader : {3}.{4})", Major, Minor, Patch, LoaderMajor, LoaderMinor);
+        }
     }
 }
