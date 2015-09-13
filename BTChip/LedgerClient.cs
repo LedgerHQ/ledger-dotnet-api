@@ -277,8 +277,8 @@ namespace BTChip
         public RegularSetup()
         {
             AcceptedCoinVersions = 0;
-            OperationMode = Ledger.OperationMode.Standard;
-            DongleFeatures = Ledger.DongleFeatures.RFC6979;
+            OperationMode = OperationMode.Standard;
+            DongleFeatures = DongleFeatures.RFC6979;
 
         }
         public OperationMode OperationMode
