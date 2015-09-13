@@ -54,7 +54,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Metaco.Ledger\BTChip.csproj">
+    <ProjectReference Include="..\BTChip\BTChip.csproj">
       <Project>{4f5e5ed8-64dd-4ca9-87a8-ca8977ff35a5}</Project>
       <Name>BTChip</Name>
     </ProjectReference>

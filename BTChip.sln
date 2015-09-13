@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
 VisualStudioVersion = 12.0.31101.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BTChip", "Metaco.Ledger\BTChip.csproj", "{4F5E5ED8-64DD-4CA9-87A8-CA8977FF35A5}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BTChip", "BTChip\BTChip.csproj", "{4F5E5ED8-64DD-4CA9-87A8-CA8977FF35A5}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BTChip.Tests", "Metaco.Ledger.Tests\BTChip.Tests.csproj", "{1F622FB6-1477-4CFE-B7C5-F3A2CF359FCD}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BTChip.Tests", "BTChip.Tests\BTChip.Tests.csproj", "{1F622FB6-1477-4CFE-B7C5-F3A2CF359FCD}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
