@@ -76,7 +76,9 @@ namespace Metaco.Ledger
                 case 0x6700:
                     return "Incorrect length";
                 case 0x6982:
-                    return "Security status not satisfied (Bitcoin dongle is locked or invalid access rights)";
+                    return "Command not allowed : Security status not satisfied";
+                case 0x6985:
+                    return "Command not allowed : Conditions of use not satisfied";
                 case 0x6A80:
                     return "Invalid data";
                 case 0x6482:

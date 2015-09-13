@@ -24,13 +24,38 @@ namespace Metaco.Ledger.Tests
 
         [Fact]
         [Trait("Manual", "Manual")]
+        public void CanRegularSetup()
+        {
+            var ledger = GetLedger();
+            ledger.RegularSetup(new RegularSetup()
+            {
+                OperationMode = OperationMode.Developer,
+                DongleFeatures = DongleFeatures.EnableAllSigHash | DongleFeatures.RFC6979 | DongleFeatures.SkipSecondFactor,
+                UserPin = new UserPin("1234")
+            });
+        }
+
+        [Fact]
+        [Trait("Manual", "Manual")]
         public void CanGetAndSetOperation()
         {
             var ledger = GetLedger();
             var op = ledger.GetOperationMode();
             var fact = ledger.GetSecondFactorMode();
+            ledger.VerifyPin("1111");
             //ledger.VerifyPin("1234");
-            //ledger.SetOperationMode(OperationMode.Server);
+            ledger.SetOperationMode(OperationMode.Developer);
+        }
+
+        [Fact]
+        [Trait("Manual", "Manual")]
+        public void ResetLedger()
+        {
+            var ledger = GetLedger();
+            for(int i = 0; i < 3; i++)
+            {
+                ledger.VerifyPin("1121");
+            }
         }
 
         private static LedgerClient GetLedger()

@@ -262,11 +262,131 @@ namespace Metaco.Ledger
 
         public void SetOperationMode(OperationMode value)
         {
-            ExchangeApdu(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_SET_OPERATION_MODE, 0, 0, new[]{ (byte)value }, OK);
+            ExchangeApdu(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_SET_OPERATION_MODE, 0, 0, new[] { (byte)value }, OK);
+        }
+
+        public void RegularSetup(RegularSetup setup)
+        {
+            var response = ExchangeApdu(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_SETUP, 0, 0, setup.ToBytes(), OK);
+
         }
     }
 
-    
+    public class RegularSetup
+    {
+        public RegularSetup()
+        {
+            AcceptedCoinVersions = 0;
+            OperationMode = Ledger.OperationMode.Standard;
+            DongleFeatures = Ledger.DongleFeatures.RFC6979;
+
+        }
+        public OperationMode OperationMode
+        {
+            get;
+            set;
+        }
+
+        public DongleFeatures DongleFeatures
+        {
+            get;
+            set;
+        }
+
+        public byte AcceptedCoinVersions
+        {
+            get;
+            set;
+        }
+
+        public byte AcceptedCoinVersionsP2SH
+        {
+            get;
+            set;
+        }
+
+        public UserPin UserPin
+        {
+            get;
+            set;
+        }
+
+        public UserPin SecondaryUserPin
+        {
+            get;
+            set;
+        }
+
+        public byte[] RestoredSeed
+        {
+            get;
+            set;
+        }
+        public byte[] RestoredWrappingKey
+        {
+            get;
+            set;
+        }
+
+        internal byte[] ToBytes()
+        {
+            MemoryStream ms = new MemoryStream();
+            ms.WriteByte((byte)OperationMode);
+            ms.WriteByte((byte)DongleFeatures);
+            ms.WriteByte(AcceptedCoinVersions);
+            ms.WriteByte(AcceptedCoinVersionsP2SH);
+            var bytes = UserPin.ToBytes();
+            ms.WriteByte((byte)bytes.Length);
+            ms.Write(bytes, 0, bytes.Length);
+            bytes = SecondaryUserPin == null ? new UserPin().ToBytes() : SecondaryUserPin.ToBytes();
+            ms.WriteByte((byte)bytes.Length);
+            ms.Write(bytes, 0, bytes.Length);
+            bytes = RestoredSeed ?? new byte[0];
+            ms.WriteByte((byte)bytes.Length);
+            ms.Write(bytes, 0, bytes.Length);
+            bytes = RestoredWrappingKey ?? new byte[0];
+            ms.WriteByte((byte)bytes.Length);
+            ms.Write(bytes, 0, bytes.Length);
+            return ms.ToArray();
+        }
+    }
+
+    public class UserPin
+    {
+        public UserPin()
+        {
+            _Bytes = new byte[0];
+        }
+        public UserPin(string pin)
+        {
+            _Bytes = Encoding.ASCII.GetBytes(pin);
+        }
+        public UserPin(byte[] bytes)
+        {
+            _Bytes = bytes.ToArray();
+        }
+        byte[] _Bytes;
+        public byte[] ToBytes()
+        {
+            return _Bytes.ToArray();
+        }
+    }
+
+    [Flags]
+    public enum DongleFeatures : byte
+    {
+        Uncompressed = 0x01,
+        RFC6979 = 0x02,
+        /// <summary>
+        /// Authorize all signature hashtypes (otherwise only authorize SIGHASH_ALL)
+        /// </summary>
+        EnableAllSigHash = 0x04,
+        /// <summary>
+        ///  Skip second factor, allow relaxed inputs and arbitrary ouput scripts if consuming P2SH inputs in a transaction
+        /// </summary>
+        SkipSecondFactor = 0x08,
+    }
+
     public enum SecondFactorMode
     {
         Keyboard = 0x11,
@@ -274,7 +394,7 @@ namespace Metaco.Ledger
         SecurityCardAndSecureScreen = 0x13,
     }
 
-    
+
     public enum OperationMode
     {
         Standard = 0x01,
