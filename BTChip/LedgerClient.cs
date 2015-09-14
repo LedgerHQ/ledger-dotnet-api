@@ -1,7 +1,4 @@
 ﻿using HidLibrary;
-using LibUsbDotNet;
-using LibUsbDotNet.Main;
-using LibUsbDotNet.WinUsb;
 using Microsoft.Win32.SafeHandles;
 using System;
 using System.Collections.Generic;
@@ -80,80 +77,11 @@ namespace BTChip
 
         public static unsafe IEnumerable<LedgerClient> GetLedgers()
         {
-            //UsbDeviceFinder finder = new UsbDeviceFinder(0x2581, 0x3b7c);
-            //var resu = UsbDevice.OpenUsbDevice(finder);
-
-            //uint nb = 0;
-            //Putin.GetRawInputDeviceList(null, ref nb, (uint)Marshal.SizeOf(typeof(Putin.RAWINPUTDEVICELIST)));
-            //var array = new Putin.RAWINPUTDEVICELIST[nb];
-            //Putin.GetRawInputDeviceList(array, ref nb, (uint)Marshal.SizeOf(typeof(Putin.RAWINPUTDEVICELIST)));
-
-
-
-            //array = array.Where(_ => _.Type == Putin.RawInputDeviceType.HID).ToArray();
-            //var ledgers = array
-            //    .Select(i =>
-            //    {
-            //        BTChip.Putin.RID_DEVICE_INFO info = new Putin.RID_DEVICE_INFO();
-            //        info.cbSize = Marshal.SizeOf(typeof(BTChip.Putin.RID_DEVICE_INFO));
-            //        uint size = 0;
-            //        Putin.GetRawInputDeviceInfo(i.hDevice, 0x2000000bU, &info, ref size);
-            //        Putin.GetRawInputDeviceInfo(i.hDevice, 0x2000000bU, &info, ref size);
-            //        return new
-            //        {
-            //            info,
-            //            i
-            //        };
-            //    })
-            //    .Where(i => i.info.hid.dwProductId == 0x3b7c && i.info.hid.dwVendorId == 0x2581)
-            //    .Select(i => new LedgerClient(new SafeFileHandle(i.i.hDevice, true)))
-            //    .ToList();
-
-
             var ledgers = HidLibrary.HidDevices.Enumerate(0x2581, 0x3b7c)
                             .Select(i => new LedgerClient(i))
                             .ToList();
             return ledgers;
         }
-
-        private static string[] ToStrings(byte[] mszReaders, int pcchReaders)
-        {
-            char nullchar = (char)0;
-            int nullindex = -1;
-            List<string> readersList = new List<string>();
-            ASCIIEncoding ascii = new ASCIIEncoding();
-            string currbuff = ascii.GetString(mszReaders);
-            int len = pcchReaders;
-
-            while(currbuff[0] != nullchar)
-            {
-                nullindex = currbuff.IndexOf(nullchar);   //get null end character
-                string reader = currbuff.Substring(0, nullindex);
-                readersList.Add(reader);
-                len = len - (reader.Length + 1);
-                currbuff = currbuff.Substring(nullindex + 1, len);
-            }
-            return readersList.ToArray();
-        }
-
-        private static AnonymousHandle EstablishContext()
-        {
-            int ctx = 0;
-            int err = ModWinsCard.SCardEstablishContext(ModWinsCard.SCARD_SCOPE_USER, 0, 0, ref ctx);
-            if(err != ModWinsCard.SCARD_S_SUCCESS)
-                throw new LedgerException(err);
-            return new AnonymousHandle(ctx, i => ModWinsCard.SCardReleaseContext(i.Handle));
-        }
-
-
-
-
-
-        private byte[] ToArray(byte[] bytes)
-        {
-            return new byte[] { (byte)bytes.Length }.Concat(bytes).ToArray();
-        }
-
 
         private byte[] ExchangeApdu(byte cla, byte ins, byte p1, byte p2, byte[] data, int[] acceptedSW)
         {
