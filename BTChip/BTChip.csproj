@@ -46,7 +46,6 @@
     <Compile Include="BTChipConstants.cs" />
     <Compile Include="BTChipException.cs" />
     <Compile Include="BTChipTransport.cs" />
-    <Compile Include="Class1.cs" />
     <Compile Include="HexEncoder.cs" />
     <Compile Include="LedgerClient.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
