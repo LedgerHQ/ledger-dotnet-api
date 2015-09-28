@@ -38,7 +38,7 @@ namespace BTChip.Tests
                 OperationMode = OperationMode.Developer,
                 DongleFeatures = DongleFeatures.EnableAllSigHash | DongleFeatures.RFC6979 | DongleFeatures.SkipSecondFactor,
                 UserPin = new UserPin("1234"),
-                RestoredWrappingKey = new LedgerKey("d16dcd194675a2c96e8915c4b86bebf5")
+                RestoredWrappingKey = new Ledger3DESKey("d16dcd194675a2c96e8915c4b86bebf5")
             });
             Assert.NotNull(response.TrustedInputKey);
             Assert.NotNull(response.WrappingKey);

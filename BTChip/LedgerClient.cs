@@ -259,7 +259,7 @@ namespace BTChip
             get;
             set;
         }
-        public LedgerKey RestoredWrappingKey
+        public Ledger3DESKey RestoredWrappingKey
         {
             get;
             set;

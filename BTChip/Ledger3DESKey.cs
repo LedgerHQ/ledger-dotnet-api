@@ -10,13 +10,13 @@ namespace BTChip
     /// <summary>
     /// 3DES-2 private key
     /// </summary>
-    public class LedgerKey
+    public class Ledger3DESKey
     {
         byte[] _Key;
-        public LedgerKey(string hex):this(HexEncoder.Instance.DecodeData(hex))
+        public Ledger3DESKey(string hex):this(HexEncoder.Instance.DecodeData(hex))
         {
         }
-        public LedgerKey(byte[] bytes)
+        public Ledger3DESKey(byte[] bytes)
         {
             if(bytes.Length != 16)
                 throw new FormatException("Invalid byte count");
