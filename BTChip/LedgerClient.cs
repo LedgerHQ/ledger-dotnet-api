@@ -155,9 +155,13 @@ namespace BTChip
 
         public bool VerifyPin(string pin, out int remaining)
         {
+            return VerifyPin(new UserPin(pin), out remaining);
+        }
+        public bool VerifyPin(UserPin pin, out int remaining)
+        {
             int lastSW;
             remaining = 3;
-            var response = ExchangeApdu(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_VERIFY_PIN, 0, 0, Encoding.ASCII.GetBytes(pin), out lastSW);
+            var response = ExchangeApdu(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_VERIFY_PIN, 0, 0, pin.ToBytes(), out lastSW);
             if(lastSW == BTChipConstants.SW_OK)
                 return true;
             remaining = (lastSW & 0x0F);
@@ -171,6 +175,11 @@ namespace BTChip
         }
 
         public bool VerifyPin(string pin)
+        {
+            int remain;
+            return VerifyPin(pin, out remain);
+        }
+        public bool VerifyPin(UserPin pin)
         {
             int remain;
             return VerifyPin(pin, out remain);
@@ -193,10 +202,10 @@ namespace BTChip
             ExchangeApdu(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_SET_OPERATION_MODE, 0, 0, new[] { (byte)value }, OK);
         }
 
-        public void RegularSetup(RegularSetup setup)
+        public SetupResponse RegularSetup(RegularSetup setup)
         {
             var response = ExchangeApdu(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_SETUP, 0, 0, setup.ToBytes(), OK);
-
+            return new SetupResponse(response);
         }
     }
 
@@ -204,10 +213,10 @@ namespace BTChip
     {
         public RegularSetup()
         {
-            AcceptedCoinVersions = 0;
             OperationMode = OperationMode.Standard;
             DongleFeatures = DongleFeatures.RFC6979;
-
+            AcceptedP2PKHVersion = 0;
+            AcceptedP2SHVersion = 0x05;
         }
         public OperationMode OperationMode
         {
@@ -221,13 +230,13 @@ namespace BTChip
             set;
         }
 
-        public byte AcceptedCoinVersions
+        public byte AcceptedP2PKHVersion
         {
             get;
             set;
         }
 
-        public byte AcceptedCoinVersionsP2SH
+        public byte AcceptedP2SHVersion
         {
             get;
             set;
@@ -261,8 +270,8 @@ namespace BTChip
             MemoryStream ms = new MemoryStream();
             ms.WriteByte((byte)OperationMode);
             ms.WriteByte((byte)DongleFeatures);
-            ms.WriteByte(AcceptedCoinVersions);
-            ms.WriteByte(AcceptedCoinVersionsP2SH);
+            ms.WriteByte(AcceptedP2PKHVersion);
+            ms.WriteByte(AcceptedP2SHVersion);
             var bytes = UserPin.ToBytes();
             ms.WriteByte((byte)bytes.Length);
             ms.Write(bytes, 0, bytes.Length);

@@ -23,16 +23,24 @@ namespace BTChip.Tests
         }
 
         [Fact]
+        public void CanUntrustedSign()
+        {
+
+        }
+
+        [Fact]
         [Trait("Manual", "Manual")]
         public void CanRegularSetup()
         {
             var ledger = GetLedger();
-            ledger.RegularSetup(new RegularSetup()
+            var response = ledger.RegularSetup(new RegularSetup()
             {
                 OperationMode = OperationMode.Developer,
                 DongleFeatures = DongleFeatures.EnableAllSigHash | DongleFeatures.RFC6979 | DongleFeatures.SkipSecondFactor,
                 UserPin = new UserPin("1234")
             });
+            Assert.Equal(16, response.TrustedInputKey.Length);
+            Assert.Equal(16, response.KeyWrappingKey.Length);
         }
 
         [Fact]
@@ -42,8 +50,8 @@ namespace BTChip.Tests
             var ledger = GetLedger();
             var op = ledger.GetOperationMode();
             var fact = ledger.GetSecondFactorMode();
-            ledger.VerifyPin("1111");
-            //ledger.VerifyPin("1234");
+            //ledger.VerifyPin("1111");
+            ledger.VerifyPin("1234");
             ledger.SetOperationMode(OperationMode.Developer);
         }
 
@@ -51,10 +59,11 @@ namespace BTChip.Tests
         [Trait("Manual", "Manual")]
         public void ResetLedger()
         {
-            var ledger = GetLedger();
             for(int i = 0; i < 3; i++)
-            {
+           { 
+                var ledger = GetLedger();
                 ledger.VerifyPin("1121");
+                Debugger.Break(); //Unplug and replug ledger
             }
         }
 
