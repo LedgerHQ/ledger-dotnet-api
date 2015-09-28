@@ -13,8 +13,8 @@ namespace BTChip
             SeedTyped = bytes[0] == 1;
             if(bytes.Length == 33)
             {
-                TrustedInputKey = bytes.Skip(1).Take(16).ToArray();
-                KeyWrappingKey = bytes.Skip(1 + 16).Take(16).ToArray();
+                TrustedInputKey = new LedgerKey(bytes.Skip(1).Take(16).ToArray());
+                WrappingKey = new LedgerKey(bytes.Skip(1 + 16).Take(16).ToArray());
             }
         }
 
@@ -24,13 +24,13 @@ namespace BTChip
             set;
         }
 
-        public byte[] KeyWrappingKey
+        public LedgerKey WrappingKey
         {
             get;
             set;
         }
 
-        public byte[] TrustedInputKey
+        public LedgerKey TrustedInputKey
         {
             get;
             set;

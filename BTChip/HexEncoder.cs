@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace BTChip
 {
-    public class HexEncoder
+    internal class HexEncoder
     {
         static HexEncoder _Instance;
         public static HexEncoder Instance

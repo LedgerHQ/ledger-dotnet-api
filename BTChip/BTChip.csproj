@@ -48,6 +48,7 @@
     <Compile Include="BTChipTransport.cs" />
     <Compile Include="HexEncoder.cs" />
     <Compile Include="LedgerClient.cs" />
+    <Compile Include="LedgerKey.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SetupResponse.cs" />
   </ItemGroup>

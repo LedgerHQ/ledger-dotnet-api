@@ -37,10 +37,12 @@ namespace BTChip.Tests
             {
                 OperationMode = OperationMode.Developer,
                 DongleFeatures = DongleFeatures.EnableAllSigHash | DongleFeatures.RFC6979 | DongleFeatures.SkipSecondFactor,
-                UserPin = new UserPin("1234")
+                UserPin = new UserPin("1234"),
+                RestoredWrappingKey = new LedgerKey("d16dcd194675a2c96e8915c4b86bebf5")
             });
-            Assert.Equal(16, response.TrustedInputKey.Length);
-            Assert.Equal(16, response.KeyWrappingKey.Length);
+            Assert.NotNull(response.TrustedInputKey);
+            Assert.NotNull(response.WrappingKey);
+            Assert.Equal("d16dcd194675a2c96e8915c4b86bebf5", response.WrappingKey.ToHex());
         }
 
         [Fact]
@@ -60,7 +62,7 @@ namespace BTChip.Tests
         public void ResetLedger()
         {
             for(int i = 0; i < 3; i++)
-           { 
+            {
                 var ledger = GetLedger();
                 ledger.VerifyPin("1121");
                 Debugger.Break(); //Unplug and replug ledger

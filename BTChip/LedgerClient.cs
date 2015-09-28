@@ -259,7 +259,7 @@ namespace BTChip
             get;
             set;
         }
-        public byte[] RestoredWrappingKey
+        public LedgerKey RestoredWrappingKey
         {
             get;
             set;
@@ -281,7 +281,7 @@ namespace BTChip
             bytes = RestoredSeed ?? new byte[0];
             ms.WriteByte((byte)bytes.Length);
             ms.Write(bytes, 0, bytes.Length);
-            bytes = RestoredWrappingKey ?? new byte[0];
+            bytes = RestoredWrappingKey == null ? new byte[0] : RestoredWrappingKey.ToBytes();
             ms.WriteByte((byte)bytes.Length);
             ms.Write(bytes, 0, bytes.Length);
             return ms.ToArray();
