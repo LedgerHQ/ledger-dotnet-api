@@ -115,7 +115,9 @@ namespace BTChip
             var result = this._Device.Read(milliseconds);
             if(result.Status == HidDeviceData.ReadStatus.Success)
             {
-                Array.Copy(result.Data, 0, buffer, 0, length);
+                if(result.Data.Length - 1 > length)
+                    return -1;
+                Array.Copy(result.Data, 1, buffer, 0, length);
                 return result.Data.Length;
             }
             return -1;
@@ -123,8 +125,8 @@ namespace BTChip
 
         internal int hid_write(IntPtr hidDeviceObject, byte[] buffer, int length)
         {
-            byte[] sent = new byte[length];
-            Array.Copy(buffer, 0, sent, 0, length);
+            byte[] sent = new byte[length + 1];
+            Array.Copy(buffer, 0, sent, 1, length);
             if(!this._Device.Write(sent))
                 return -1;
             Array.Copy(sent, 0, buffer, 0, length);
@@ -169,7 +171,6 @@ namespace BTChip
                 return -1;
             }
             outputLength -= 7;
-            offsetOut++; //Skip first
             output[offsetOut++] = (byte)((channel >> 8) & 0xff);
             output[offsetOut++] = (byte)(channel & 0xff);
             output[offsetOut++] = (byte)TAG_APDU;
@@ -239,7 +240,6 @@ namespace BTChip
             uint offsetOut = 0;
             uint responseLength;
             uint blockSize;
-            offset++; //Skip first
             if((data == null) || (dataLength < 7 + 5))
             {
                 return 0;

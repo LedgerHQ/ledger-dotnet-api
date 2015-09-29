@@ -34,11 +34,13 @@
     <Reference Include="HidLibrary">
       <HintPath>..\packages\hidlibrary.3.2.31.0\lib\HidLibrary.dll</HintPath>
     </Reference>
-    <Reference Include="NBitcoin">
-      <HintPath>..\packages\NBitcoin.2.1.4.7\lib\net45\NBitcoin.dll</HintPath>
+    <Reference Include="NBitcoin, Version=2.1.4.8, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\NBitcoin.2.1.4.8\lib\net45\NBitcoin.dll</HintPath>
     </Reference>
-    <Reference Include="NBitcoin.BouncyCastle">
-      <HintPath>..\packages\NBitcoin.2.1.4.7\lib\net45\NBitcoin.BouncyCastle.dll</HintPath>
+    <Reference Include="NBitcoin.BouncyCastle, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\NBitcoin.2.1.4.8\lib\net45\NBitcoin.BouncyCastle.dll</HintPath>
     </Reference>
     <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -59,12 +61,18 @@
     <Compile Include="Bip32EncodedKey.cs" />
     <Compile Include="BTChipConstants.cs" />
     <Compile Include="BTChipException.cs" />
+    <Compile Include="BTChipInput.cs" />
     <Compile Include="BTChipTransport.cs" />
+    <Compile Include="BufferUtils.cs" />
+    <Compile Include="GetWalletPubKeyResponse.cs" />
+    <Compile Include="Guard.cs" />
     <Compile Include="LedgerClient.cs" />
     <Compile Include="Ledger3DESKey.cs" />
     <Compile Include="LedgerEncodedKey.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Serializer.cs" />
     <Compile Include="SetupResponse.cs" />
+    <Compile Include="VarintUtils.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

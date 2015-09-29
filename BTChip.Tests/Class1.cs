@@ -1,4 +1,6 @@
-﻿using System;
+﻿using NBitcoin;
+using NBitcoin.DataEncoders;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -13,24 +15,45 @@ namespace BTChip.Tests
         [Fact]
         public void TestDongleCall()
         {
+            //var bytes = Encoders.Hex.DecodeData("4104c4ab312a06924e2b4cd6c4e0af508788c56d328a5ea8d0c708fd61c43ec04083ff657dfcf6d1ccdca590d54fa970c18257f562df4c94000754846b5f25e8ba3e2231506a635a7445317251476257664b534256794a763334585763354276657136713786dc946e96f3802139f094cc14b00097742d74dfd881502773d5fbbbecffe0ea");
+
+            //var o = new GetWalletPubKeyResponse(bytes);
+
+            ExtKey key = new ExtKey(Encoders.Hex.DecodeData("1c241d6e8e26990c8b913191d4c1b6cf5d42a63bbd5bffdd90dea34f34ff5a33"));
+            var expected = key.Neuter().Derive(1).PubKey.Decompress().ToHex();
+            //Assume non developer modet
             var ledger = GetLedger();
             Assert.NotNull(ledger);
             var firmware = ledger.GetFirmwareVersion();
             Assert.NotNull(firmware);
             Assert.True(firmware.ToString().Contains("Loader"));
-
             Assert.True(ledger.VerifyPin("1234"));
+
+            var walletPubKey = ledger.GetWalletPubKey(new KeyPath("1"));
+            Assert.Equal("1Gnyaji5n2pjgygRTLJrU4zT2a8H8HLran", walletPubKey.Address.ToString());
+            Assert.Equal("1Gnyaji5n2pjgygRTLJrU4zT2a8H8HLran", walletPubKey.UncompressedPublicKey.Compress().Hash.GetAddress(Network.Main).ToString());
         }
 
         [Fact]
         public void CanUntrustedSign()
         {
+            var ledger = GetLedger();
+            //var seed = Encoders.Hex.DecodeData("1c241d6e8e26990c8b913191d4c1b6cf5d42a63bbd5bffdd90dea34f34ff5a334542db021ae621c0f16cfc39c70e1c23ccbede464851cd5ceaf67266b151f0c2");
+            var seed = Encoders.Hex.DecodeData("1c241d6e8e26990c8b913191d4c1b6cf5d42a63bbd5bffdd90dea34f34ff5a33");
+
+            var response = ledger.RegularSetup(new RegularSetup()
+            {
+                OperationMode = OperationMode.Server,
+                DongleFeatures = DongleFeatures.EnableAllSigHash | DongleFeatures.RFC6979 | DongleFeatures.SkipSecondFactor,
+                UserPin = new UserPin("1234"),
+                RestoredSeed = seed,
+            });
 
         }
 
         [Fact]
         [Trait("Manual", "Manual")]
-        public void CanRegularSetup()
+        public void CanRegularDeveloperSetup()
         {
             var ledger = GetLedger();
             var response = ledger.RegularSetup(new RegularSetup()
@@ -54,7 +77,6 @@ namespace BTChip.Tests
             var fact = ledger.GetSecondFactorMode();
             //ledger.VerifyPin("1111");
             ledger.VerifyPin("1234");
-            ledger.SetOperationMode(OperationMode.Developer);
         }
 
         [Fact]

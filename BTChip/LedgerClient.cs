@@ -1,5 +1,6 @@
 ﻿using HidLibrary;
 using Microsoft.Win32.SafeHandles;
+using NBitcoin;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -91,6 +92,7 @@ namespace BTChip
             return response;
         }
 
+
         private static void CheckSW(int[] acceptedSW, int sw)
         {
             if(!acceptedSW.Contains(sw))
@@ -153,7 +155,13 @@ namespace BTChip
             return new BTChipFirmware(response);
         }
 
-
+        public GetWalletPubKeyResponse GetWalletPubKey(KeyPath keyPath)
+        {
+            Guard.AssertKeyPath(keyPath);
+            byte[] bytes = Serializer.Serialize(keyPath);
+            byte[] response = ExchangeApdu(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_GET_WALLET_PUBLIC_KEY, (byte)0x00, (byte)0x00, bytes, OK);
+            return new GetWalletPubKeyResponse(response);
+        }
 
         public bool VerifyPin(string pin, out int remaining)
         {
@@ -209,6 +217,49 @@ namespace BTChip
             var response = ExchangeApdu(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_SETUP, 0, 0, setup.ToBytes(), OK);
             return new SetupResponse(response);
         }
+
+        //    public BTChipInput getTrustedInput(Transaction transaction, long index)
+        //    {
+        //        MemoryStream data = new MemoryStream();
+        //        // Header
+        //        BufferUtils.writeUint32BE(data, index);
+        //        BufferUtils.writeBuffer(data, transaction.Version);
+        //        VarintUtils.write(data, transaction.Inputs.Count);
+        //        ExchangeApdu(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_GET_TRUSTED_INPUT, (byte)0x00, (byte)0x00, data.ToArray(), OK);
+        //        // Each input
+        //        foreach(var input in transaction.Inputs)
+        //        {
+        //            data = new MemoryStream();
+        //            BufferUtils.writeBuffer(data, input.PrevOut);
+        //            VarintUtils.write(data, input.ScriptSig.Length);
+        //            ExchangeApdu(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_GET_TRUSTED_INPUT, (byte)0x80, (byte)0x00, data.ToArray(), OK);
+        //            data = new MemoryStream();
+        //            BufferUtils.writeBuffer(data, input.ScriptSig.ToBytes());
+        //            exchangeApduSplit2(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_GET_TRUSTED_INPUT, (byte)0x80, (byte)0x00, data.ToArray(), input.Sequence, OK);
+        //        }
+        //        // Number of outputs
+        //        data = new MemoryStream();
+        //        VarintUtils.write(data, transaction.Outputs.Count);
+        //        ExchangeApdu(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_GET_TRUSTED_INPUT, (byte)0x80, (byte)0x00, data.ToArray(), OK);
+        //        // Each output
+        //        foreach(var output in transaction.Outputs)
+        //        {
+        //            data = new MemoryStream();
+        //            BufferUtils.writeBuffer(data, output.Value.Satoshi);
+        //            VarintUtils.write(data, output.ScriptPubKey.Length);
+        //            ExchangeApdu(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_GET_TRUSTED_INPUT, (byte)0x80, (byte)0x00, data.ToArray(), OK);
+        //            data = new MemoryStream();
+        //            BufferUtils.writeBuffer(data, output.ScriptPubKey.ToBytes());
+        //            exchangeApduSplit(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_GET_TRUSTED_INPUT, (byte)0x80, (byte)0x00, data.ToArray(), OK);
+        //        }
+        //        // Locktime
+        //        byte[] response = ExchangeApdu(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_GET_TRUSTED_INPUT, (byte)0x80, (byte)0x00, transaction.LockTime, OK);
+        //        return new BTChipInput(response, true);
+        //    }
+        //}
+
+
+        
     }
 
     public class RegularSetup
@@ -280,9 +331,11 @@ namespace BTChip
             bytes = SecondaryUserPin == null ? new UserPin().ToBytes() : SecondaryUserPin.ToBytes();
             ms.WriteByte((byte)bytes.Length);
             ms.Write(bytes, 0, bytes.Length);
+
             bytes = RestoredSeed ?? new byte[0];
             ms.WriteByte((byte)bytes.Length);
             ms.Write(bytes, 0, bytes.Length);
+
             bytes = RestoredWrappingKey == null ? new byte[0] : RestoredWrappingKey.ToBytes();
             ms.WriteByte((byte)bytes.Length);
             ms.Write(bytes, 0, bytes.Length);
