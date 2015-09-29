@@ -153,6 +153,8 @@ namespace BTChip
             return new BTChipFirmware(response);
         }
 
+
+
         public bool VerifyPin(string pin, out int remaining)
         {
             return VerifyPin(new UserPin(pin), out remaining);
