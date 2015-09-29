@@ -1,4 +1,5 @@
-﻿using System;
+﻿using NBitcoin.DataEncoders;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -23,7 +24,7 @@ namespace BTChip
 
         public string ToHex()
         {
-            return HexEncoder.Instance.EncodeData(_Key, 0, _Key.Length);
+            return Encoders.Hex.EncodeData(_Key, 0, _Key.Length);
         }
     }
 }

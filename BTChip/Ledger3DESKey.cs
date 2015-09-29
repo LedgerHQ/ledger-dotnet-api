@@ -1,4 +1,5 @@
-﻿using System;
+﻿using NBitcoin.DataEncoders;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -13,7 +14,8 @@ namespace BTChip
     public class Ledger3DESKey
     {
         byte[] _Key;
-        public Ledger3DESKey(string hex):this(HexEncoder.Instance.DecodeData(hex))
+        public Ledger3DESKey(string hex)
+            : this(Encoders.Hex.DecodeData(hex))
         {
         }
         public Ledger3DESKey(byte[] bytes)
@@ -30,7 +32,7 @@ namespace BTChip
 
         public string ToHex()
         {
-            return HexEncoder.Instance.EncodeData(_Key, 0, 16);
+            return Encoders.Hex.EncodeData(_Key, 0, 16);
         }
     }
 }
