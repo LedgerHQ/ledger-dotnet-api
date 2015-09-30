@@ -1,6 +1,7 @@
 ﻿using HidLibrary;
 using Microsoft.Win32.SafeHandles;
 using NBitcoin;
+using NBitcoin.Crypto;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -384,7 +385,7 @@ namespace BTChip
         }
 
 
-        public byte[] UntrustedHashSign(KeyPath keyPath, UserPin pin, LockTime lockTime, SigHash sigHashType)
+        public TransactionSignature UntrustedHashSign(KeyPath keyPath, UserPin pin, LockTime lockTime, SigHash sigHashType)
         {
             MemoryStream data = new MemoryStream();
             byte[] path = Serializer.Serialize(keyPath);
@@ -397,7 +398,7 @@ namespace BTChip
             data.WriteByte((byte)sigHashType);
             byte[] response = ExchangeApdu(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_HASH_SIGN, (byte)0x00, (byte)0x00, data.ToArray(), OK);
             response[0] = (byte)0x30;
-            return response;
+            return new TransactionSignature(response);
         }
     }
 
