@@ -310,35 +310,46 @@ namespace BTChip
             return new TrustedInput(response);
         }
 
-        //public void startUntrustedTransaction(bool newTransaction, long inputIndex, BTChipInput[] usedInputList, byte[] redeemScript)
-        //{
-        //    // Start building a fake transaction with the passed inputs
-        //    MemoryStream data = new MemoryStream();
-        //    BufferUtils.WriteBuffer(data, BitcoinTransaction.DEFAULT_VERSION);
-        //    VarintUtils.write(data, usedInputList.length);
-        //    ExchangeApdu(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_HASH_INPUT_START, (byte)0x00, (newTransaction ? (byte)0x00 : (byte)0x80), data.toByteArray(), OK);
-        //    // Loop for each input
-        //    long currentIndex = 0;
-        //    foreach(BTChipInput input in usedInputList)
-        //    {
-        //        byte[] script = (currentIndex == inputIndex ? redeemScript : new byte[0]);
-        //        data = new MemoryStream();
-        //        data.write(input.Trusted ? (byte)0x01 : (byte)0x00);
-        //        if(input.Trusted)
-        //        {
-        //            // untrusted inputs have constant length
-        //            data.write(input.getValue().length);
-        //        }
-        //        BufferUtils.WriteBuffer(data, input.getValue());
-        //        VarintUtils.write(data, script.length);
-        //        ExchangeApdu(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_HASH_INPUT_START, (byte)0x80, (byte)0x00, data.toByteArray(), OK);
-        //        data = new MemoryStream();
-        //        BufferUtils.WriteBuffer(data, script);
-        //        BufferUtils.WriteBuffer(data, BitcoinTransaction.DEFAULT_SEQUENCE);
-        //        ExchangeApduSplit(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_HASH_INPUT_START, (byte)0x80, (byte)0x00, data.toByteArray(), OK);
-        //        currentIndex++;
-        //    }
-        //}
+
+        public void StartUntrustedTransaction(bool newTransaction, Transaction tx, int index, TrustedInput[] trustedInputs)
+        {
+            StartUntrustedTransaction(newTransaction, tx.Inputs.AsIndexedInputs().Skip(index).First(), trustedInputs);
+        }
+        public void StartUntrustedTransaction(bool newTransaction, IndexedTxIn txIn, TrustedInput[] trustedInputs)
+        {
+            // Start building a fake transaction with the passed inputs
+            MemoryStream data = new MemoryStream();
+            BufferUtils.WriteBuffer(data, txIn.Transaction.Version);
+            VarintUtils.write(data, trustedInputs.Length);
+            ExchangeApdu(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_HASH_INPUT_START, (byte)0x00, (newTransaction ? (byte)0x00 : (byte)0x80), data.ToArray(), OK);
+            // Loop for each input
+            long currentIndex = 0;
+            foreach(var input in txIn.Transaction.Inputs)
+            {
+                var trustedInput = trustedInputs.FirstOrDefault(i => i.OutPoint == input.PrevOut);
+                byte[] script = (currentIndex == txIn.Index ? txIn.TxIn.ScriptSig.ToBytes() : new byte[0]);
+                data = new MemoryStream();
+                data.write(trustedInput != null ? (byte)0x01 : (byte)0x00);
+                if(trustedInput != null)
+                {
+                    var b = trustedInput.ToBytes();
+                    // untrusted inputs have constant length
+                    data.write(b.Length);
+                    BufferUtils.WriteBuffer(data, b);
+                }
+                else
+                {
+                    BufferUtils.WriteBuffer(data, input.PrevOut);
+                }
+                VarintUtils.write(data, script.Length);
+                ExchangeApdu(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_HASH_INPUT_START, (byte)0x80, (byte)0x00, data.ToArray(), OK);
+                data = new MemoryStream();
+                BufferUtils.WriteBuffer(data, script);
+                BufferUtils.WriteBuffer(data, input.Sequence);
+                ExchangeApduSplit(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_HASH_INPUT_START, (byte)0x80, (byte)0x00, data.ToArray(), OK);
+                currentIndex++;
+            }
+        }
     }
 
 

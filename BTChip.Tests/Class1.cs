@@ -43,16 +43,26 @@ namespace BTChip.Tests
             //Assume SetServerMode ran before
             var ledger = GetLedger();
             ledger.VerifyPin("1234");
-            Transaction tx = new Transaction();
-            tx.Inputs.Add(new TxIn(OutPoint.Parse("000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f-0"), BitcoinAddress.Create("1PcLMBsvjkqvs9MaENqHNBpa91atjm89Lb").ScriptPubKey));
-            tx.Inputs.Add(new TxIn(OutPoint.Parse("000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f-1"), BitcoinAddress.Create("15sYbVpRh6dyWycZMwPdxJWD4xbfxReeHe").ScriptPubKey));
-            tx.Inputs.Add(new TxIn(OutPoint.Parse("000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f-2"), BitcoinAddress.Create("1PcLMBsvjkqvs9MaENqHNBpa91atjm89Lb").ScriptPubKey));
-            tx.Outputs.Add(new TxOut(Money.Coins(1.0m), BitcoinAddress.Create("15sYbVpRh6dyWycZMwPdxJWD4xbfxReeHe")));
-            tx.Outputs.Add(new TxOut(Money.Coins(1.1m), BitcoinAddress.Create("1PcLMBsvjkqvs9MaENqHNBpa91atjm89Lb")));
+            Transaction funding = new Transaction();
+            funding.Inputs.Add(new TxIn(OutPoint.Parse("000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f-0"), BitcoinAddress.Create("1PcLMBsvjkqvs9MaENqHNBpa91atjm89Lb").ScriptPubKey));
+            funding.Inputs.Add(new TxIn(OutPoint.Parse("000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f-1"), BitcoinAddress.Create("15sYbVpRh6dyWycZMwPdxJWD4xbfxReeHe").ScriptPubKey));
+            funding.Inputs.Add(new TxIn(OutPoint.Parse("000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f-2"), BitcoinAddress.Create("1PcLMBsvjkqvs9MaENqHNBpa91atjm89Lb").ScriptPubKey));
 
-            var input = ledger.GetTrustedInput(tx, 0);
-            var input2 = ledger.GetTrustedInput(tx, 1);
-            Assert.Equal(Money.Coins(1.1m), input2.Amount);
+            funding.Outputs.Add(new TxOut(Money.Coins(1.1m), BitcoinAddress.Create("1PcLMBsvjkqvs9MaENqHNBpa91atjm89Lb")));
+            funding.Outputs.Add(new TxOut(Money.Coins(1.0m), BitcoinAddress.Create("15sYbVpRh6dyWycZMwPdxJWD4xbfxReeHe")));
+            funding.Outputs.Add(new TxOut(Money.Coins(1.2m), BitcoinAddress.Create("1PcLMBsvjkqvs9MaENqHNBpa91atjm89Lb")));
+
+            var input = ledger.GetTrustedInput(funding, 0);
+            var input2 = ledger.GetTrustedInput(funding, 2);
+            Assert.Equal(Money.Coins(1.2m), input2.Amount);
+
+            var spending = new Transaction();
+            spending.Inputs.AddRange(funding.Outputs.AsCoins().Select(o => new TxIn(o.Outpoint, o.ScriptPubKey)));
+            spending.Outputs.Add(new TxOut(Money.Coins(0.5m), BitcoinAddress.Create("15sYbVpRh6dyWycZMwPdxJWD4xbfxReeHe")));
+
+            ledger.StartUntrustedTransaction(true, spending, 0, new[] { input, input2 });
+            ledger.StartUntrustedTransaction(false, spending, 1, new[] { input, input2 });
+            ledger.StartUntrustedTransaction(false, spending, 2, new[] { input, input2 });
         }
 
         [Fact]

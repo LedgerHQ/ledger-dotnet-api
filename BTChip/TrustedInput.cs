@@ -31,8 +31,22 @@ namespace BTChip
                 Flags = (byte)stream.Inner.ReadByte();
             }
             stream.ReadWrite(ref _Nonce);
-            stream.ReadWrite(ref _TransactionId);
-            stream.ReadWrite(ref _Index);
+
+            if(stream.Serializing)
+            {
+                uint256 txId = OutPoint.Hash;
+                stream.ReadWrite(ref txId);
+                uint index = OutPoint.N;
+                stream.ReadWrite(ref index);
+            }
+            else
+            {
+                uint256 txId = new uint256();
+                stream.ReadWrite(ref txId);
+                uint index = 0;
+                stream.ReadWrite(ref index);
+                _OutPoint = new OutPoint(txId, index);
+            }
 
             ulong amount = stream.Serializing ? (ulong)_Amount.Satoshi : 0;
             stream.ReadWrite(ref amount);
@@ -58,21 +72,12 @@ namespace BTChip
             }
         }
 
-        private uint256 _TransactionId;
-        public uint256 TransactionId
+        private OutPoint _OutPoint;
+        public OutPoint OutPoint
         {
             get
             {
-                return _TransactionId;
-            }
-        }
-
-        private int _Index;
-        public int Index
-        {
-            get
-            {
-                return _Index;
+                return _OutPoint;
             }
         }
 
@@ -92,6 +97,14 @@ namespace BTChip
             {
                 return _Signature;
             }
+        }
+
+        public byte[] ToBytes()
+        {
+            var ms = new MemoryStream();
+            var stream = new BitcoinStream(ms, true);
+            ReadWrite(stream);
+            return ms.ToArray();
         }
     }
 }
