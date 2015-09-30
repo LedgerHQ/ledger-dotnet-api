@@ -350,6 +350,55 @@ namespace BTChip
                 currentIndex++;
             }
         }
+
+        public byte[] FinalizeInputFull(Transaction spending)
+        {
+            byte[] result = null;
+            int offset = 0;
+            byte[] response = null;
+            var ms = new MemoryStream();
+            BitcoinStream bs = new BitcoinStream(ms, true);
+            var outputs = spending.Outputs;
+            bs.ReadWrite<TxOutList, TxOut>(ref outputs);
+            var data = ms.ToArray();
+
+            while(offset < data.Length)
+            {
+                int blockLength = ((data.Length - offset) > 255 ? 255 : data.Length - offset);
+                byte[] apdu = new byte[blockLength + 5];
+                apdu[0] = BTChipConstants.BTCHIP_CLA;
+                apdu[1] = BTChipConstants.BTCHIP_INS_HASH_INPUT_FINALIZE_FULL;
+                apdu[2] = ((offset + blockLength) == data.Length ? (byte)0x80 : (byte)0x00);
+                apdu[3] = (byte)0x00;
+                apdu[4] = (byte)(blockLength);
+                Array.Copy(data, offset, apdu, 5, blockLength);
+                response = ExchangeApdu(apdu, OK);
+                offset += blockLength;
+            }
+            result = response; //convertResponseToOutput(response);
+            if(result == null)
+            {
+                throw new BTChipException("Unsupported user confirmation method");
+            }
+            return result;
+        }
+
+
+        public byte[] UntrustedHashSign(KeyPath keyPath, UserPin pin, LockTime lockTime, SigHash sigHashType)
+        {
+            MemoryStream data = new MemoryStream();
+            byte[] path = Serializer.Serialize(keyPath);
+            BufferUtils.WriteBuffer(data, path);
+
+            var pinBytes = pin == null ? new byte[0] : pin.ToBytes();
+            data.write(pinBytes.Length);
+            BufferUtils.WriteBuffer(data, pinBytes);
+            BufferUtils.WriteUint32BE(data, (uint)lockTime);
+            data.WriteByte((byte)sigHashType);
+            byte[] response = ExchangeApdu(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_HASH_SIGN, (byte)0x00, (byte)0x00, data.ToArray(), OK);
+            response[0] = (byte)0x30;
+            return response;
+        }
     }
 
 
@@ -455,6 +504,14 @@ namespace BTChip
         public byte[] ToBytes()
         {
             return _Bytes.ToArray();
+        }
+
+        public int Length
+        {
+            get
+            {
+                return _Bytes.Length;
+            }
         }
     }
 

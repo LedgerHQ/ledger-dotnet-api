@@ -63,6 +63,11 @@ namespace BTChip.Tests
             ledger.StartUntrustedTransaction(true, spending, 0, new[] { input, input2 });
             ledger.StartUntrustedTransaction(false, spending, 1, new[] { input, input2 });
             ledger.StartUntrustedTransaction(false, spending, 2, new[] { input, input2 });
+
+            //ledger.VerifyPin("1234");
+            //ledger.FinalizeInputFull(spending);
+
+            var b = ledger.UntrustedHashSign(new KeyPath(1), new UserPin("1234"), new LockTime(), SigHash.All);
         }
 
         [Fact]
