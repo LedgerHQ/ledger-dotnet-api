@@ -62,7 +62,7 @@
     <Compile Include="Bip32EncodedKey.cs" />
     <Compile Include="BTChipConstants.cs" />
     <Compile Include="BTChipException.cs" />
-    <Compile Include="BTChipInput.cs" />
+    <Compile Include="TrustedInput.cs" />
     <Compile Include="BTChipTransport.cs" />
     <Compile Include="BufferUtils.cs" />
     <Compile Include="GetWalletPubKeyResponse.cs" />

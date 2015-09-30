@@ -8,12 +8,11 @@ using NBitcoin;
 
 namespace BTChip
 {
-    public class BTChipInput
+    public class TrustedInput
     {
 
-        public BTChipInput(byte[] response, bool trusted)
+        public TrustedInput(byte[] response)
         {
-            _Trusted = trusted;
             var stream = new BitcoinStream(new MemoryStream(response), false);
             ReadWrite(stream);
         }
@@ -43,14 +42,6 @@ namespace BTChip
             stream.ReadWrite(ref _Signature);
         }
 
-        private bool _Trusted;
-        public bool Trusted
-        {
-            get
-            {
-                return _Trusted;
-            }
-        }
 
         public byte Flags
         {
