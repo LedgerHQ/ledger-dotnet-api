@@ -34,10 +34,32 @@ namespace BTChip.Tests
             return Encoders.Hex.DecodeData("1c241d6e8e26990c8b913191d4c1b6cf5d42a63bbd5bffdd90dea34f34ff5a334542db021ae621c0f16cfc39c70e1c23ccbede464851cd5ceaf67266b151f0c2");
         }
 
+
+
+        [Fact]
+        [Trait("Manual", "Manual")]
+        public void CanSignTransaction()
+        {
+            //Assume SetServerMode ran before
+            var ledger = GetLedger();
+            ledger.VerifyPin("1234");
+            Transaction tx = new Transaction();
+            tx.Inputs.Add(new TxIn(OutPoint.Parse("000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f-0"), BitcoinAddress.Create("1PcLMBsvjkqvs9MaENqHNBpa91atjm89Lb").ScriptPubKey));
+            tx.Inputs.Add(new TxIn(OutPoint.Parse("000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f-1"), BitcoinAddress.Create("15sYbVpRh6dyWycZMwPdxJWD4xbfxReeHe").ScriptPubKey));
+            tx.Inputs.Add(new TxIn(OutPoint.Parse("000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f-2"), BitcoinAddress.Create("1PcLMBsvjkqvs9MaENqHNBpa91atjm89Lb").ScriptPubKey));
+            tx.Outputs.Add(new TxOut(Money.Coins(1.0m), BitcoinAddress.Create("15sYbVpRh6dyWycZMwPdxJWD4xbfxReeHe")));
+            tx.Outputs.Add(new TxOut(Money.Coins(1.1m), BitcoinAddress.Create("1PcLMBsvjkqvs9MaENqHNBpa91atjm89Lb")));
+
+            var input = ledger.GetTrustedInput(tx, 0);
+            var input2 = ledger.GetTrustedInput(tx, 1);
+            Assert.Equal(Money.Coins(1.1m), input2.Amount);
+        }
+
         [Fact]
         [Trait("Manual", "Manual")]
         public void SetServerMode()
         {
+            //Assume is resetted
             var ledger = GetLedger();
             var seed = GetSeed();
             var response = ledger.RegularSetup(new RegularSetup()
@@ -54,6 +76,7 @@ namespace BTChip.Tests
         [Trait("Manual", "Manual")]
         public void CanRegularDeveloperSetup()
         {
+            //Assume is resetted
             var ledger = GetLedger();
             var response = ledger.RegularSetup(new RegularSetup()
             {
@@ -71,11 +94,10 @@ namespace BTChip.Tests
         [Trait("Manual", "Manual")]
         public void CanGetAndSetOperation()
         {
+            //Assume is setup
             var ledger = GetLedger();
             var op = ledger.GetOperationMode();
             var fact = ledger.GetSecondFactorMode();
-            //ledger.VerifyPin("1111");
-            ledger.VerifyPin("1234");
         }
 
         [Fact]
@@ -100,6 +122,7 @@ namespace BTChip.Tests
         [Trait("Manual", "Manual")]
         public void CanSeeRemainingTries()
         {
+            //Assume is setup
             var ledger = GetLedger();
             Assert.True(ledger.VerifyPin("1234"));
 

@@ -92,6 +92,52 @@ namespace BTChip
             return response;
         }
 
+        private byte[] ExchangeApduSplit(byte cla, byte ins, byte p1, byte p2, byte[] data, int[] acceptedSW)
+        {
+            int offset = 0;
+            byte[] result = null;
+            while(offset < data.Length)
+            {
+                int blockLength = ((data.Length - offset) > 255 ? 255 : data.Length - offset);
+                byte[] apdu = new byte[blockLength + 5];
+                apdu[0] = cla;
+                apdu[1] = ins;
+                apdu[2] = p1;
+                apdu[3] = p2;
+                apdu[4] = (byte)(blockLength);
+                Array.Copy(data, offset, apdu, 5, blockLength);
+                result = ExchangeApdu(apdu, acceptedSW);
+                offset += blockLength;
+            }
+            return result;
+        }
+
+        private byte[] ExchangeApduSplit2(byte cla, byte ins, byte p1, byte p2, byte[] data, byte[] data2, int[] acceptedSW)
+        {
+            int offset = 0;
+            byte[] result = null;
+            int maxBlockSize = 255 - data2.Length;
+            while(offset < data.Length)
+            {
+                int blockLength = ((data.Length - offset) > maxBlockSize ? maxBlockSize : data.Length - offset);
+                var lastBlock = ((offset + blockLength) == data.Length);
+                byte[] apdu = new byte[blockLength + 5 + (lastBlock ? data2.Length : 0)];
+                apdu[0] = cla;
+                apdu[1] = ins;
+                apdu[2] = p1;
+                apdu[3] = p2;
+                apdu[4] = (byte)(blockLength + (lastBlock ? data2.Length : 0));
+                Array.Copy(data, offset, apdu, 5, blockLength);
+                if(lastBlock)
+                {
+                    Array.Copy(data2, 0, apdu, 5 + blockLength, data2.Length);
+                }
+                result = ExchangeApdu(apdu, acceptedSW);
+                offset += blockLength;
+            }
+            return result;
+        }
+
 
         private static void CheckSW(int[] acceptedSW, int sw)
         {
@@ -113,6 +159,7 @@ namespace BTChip
             Array.Copy(data, 0, apdu, 5, data.Length);
             return Exchange(apdu, out sw);
         }
+
         private byte[] ExchangeApdu(byte cla, byte ins, byte p1, byte p2, int length, int[] acceptedSW)
         {
             byte[] apdu = new byte[]
@@ -218,49 +265,55 @@ namespace BTChip
             return new SetupResponse(response);
         }
 
-        //    public BTChipInput getTrustedInput(Transaction transaction, long index)
-        //    {
-        //        MemoryStream data = new MemoryStream();
-        //        // Header
-        //        BufferUtils.writeUint32BE(data, index);
-        //        BufferUtils.writeBuffer(data, transaction.Version);
-        //        VarintUtils.write(data, transaction.Inputs.Count);
-        //        ExchangeApdu(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_GET_TRUSTED_INPUT, (byte)0x00, (byte)0x00, data.ToArray(), OK);
-        //        // Each input
-        //        foreach(var input in transaction.Inputs)
-        //        {
-        //            data = new MemoryStream();
-        //            BufferUtils.writeBuffer(data, input.PrevOut);
-        //            VarintUtils.write(data, input.ScriptSig.Length);
-        //            ExchangeApdu(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_GET_TRUSTED_INPUT, (byte)0x80, (byte)0x00, data.ToArray(), OK);
-        //            data = new MemoryStream();
-        //            BufferUtils.writeBuffer(data, input.ScriptSig.ToBytes());
-        //            exchangeApduSplit2(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_GET_TRUSTED_INPUT, (byte)0x80, (byte)0x00, data.ToArray(), input.Sequence, OK);
-        //        }
-        //        // Number of outputs
-        //        data = new MemoryStream();
-        //        VarintUtils.write(data, transaction.Outputs.Count);
-        //        ExchangeApdu(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_GET_TRUSTED_INPUT, (byte)0x80, (byte)0x00, data.ToArray(), OK);
-        //        // Each output
-        //        foreach(var output in transaction.Outputs)
-        //        {
-        //            data = new MemoryStream();
-        //            BufferUtils.writeBuffer(data, output.Value.Satoshi);
-        //            VarintUtils.write(data, output.ScriptPubKey.Length);
-        //            ExchangeApdu(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_GET_TRUSTED_INPUT, (byte)0x80, (byte)0x00, data.ToArray(), OK);
-        //            data = new MemoryStream();
-        //            BufferUtils.writeBuffer(data, output.ScriptPubKey.ToBytes());
-        //            exchangeApduSplit(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_GET_TRUSTED_INPUT, (byte)0x80, (byte)0x00, data.ToArray(), OK);
-        //        }
-        //        // Locktime
-        //        byte[] response = ExchangeApdu(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_GET_TRUSTED_INPUT, (byte)0x80, (byte)0x00, transaction.LockTime, OK);
-        //        return new BTChipInput(response, true);
-        //    }
-        //}
-
-
-        
+        public BTChipInput GetTrustedInput(IndexedTxOut txout)
+        {
+            return GetTrustedInput(txout.Transaction, (int)txout.N);
+        }
+        public BTChipInput GetTrustedInput(Transaction transaction, int outputIndex)
+        {
+            if(outputIndex >= transaction.Outputs.Count)
+                throw new ArgumentOutOfRangeException("outputIndex is bigger than the number of outputs in the transaction","outputIndex");
+            MemoryStream data = new MemoryStream();
+            // Header
+            BufferUtils.WriteUint32BE(data, outputIndex);
+            BufferUtils.WriteBuffer(data, transaction.Version);
+            VarintUtils.write(data, transaction.Inputs.Count);
+            ExchangeApdu(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_GET_TRUSTED_INPUT, (byte)0x00, (byte)0x00, data.ToArray(), OK);
+            // Each input
+            foreach(var input in transaction.Inputs)
+            {
+                data = new MemoryStream();
+                BufferUtils.WriteBuffer(data, input.PrevOut);
+                VarintUtils.write(data, input.ScriptSig.Length);
+                ExchangeApdu(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_GET_TRUSTED_INPUT, (byte)0x80, (byte)0x00, data.ToArray(), OK);
+                data = new MemoryStream();
+                BufferUtils.WriteBuffer(data, input.ScriptSig.ToBytes());
+                ExchangeApduSplit2(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_GET_TRUSTED_INPUT, (byte)0x80, (byte)0x00, data.ToArray(), Utils.ToBytes(input.Sequence, true), OK);
+            }
+            // Number of outputs
+            data = new MemoryStream();
+            VarintUtils.write(data, transaction.Outputs.Count);
+            ExchangeApdu(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_GET_TRUSTED_INPUT, (byte)0x80, (byte)0x00, data.ToArray(), OK);
+            // Each output
+            foreach(var output in transaction.Outputs)
+            {
+                data = new MemoryStream();
+                BufferUtils.WriteBuffer(data, Utils.ToBytes((ulong)output.Value.Satoshi, true));
+                VarintUtils.write(data, output.ScriptPubKey.Length);
+                ExchangeApdu(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_GET_TRUSTED_INPUT, (byte)0x80, (byte)0x00, data.ToArray(), OK);
+                data = new MemoryStream();
+                BufferUtils.WriteBuffer(data, output.ScriptPubKey.ToBytes());
+                ExchangeApduSplit(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_GET_TRUSTED_INPUT, (byte)0x80, (byte)0x00, data.ToArray(), OK);
+            }
+            // Locktime
+            byte[] response = ExchangeApdu(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_GET_TRUSTED_INPUT, (byte)0x80, (byte)0x00, transaction.LockTime.ToBytes(), OK);
+            return new BTChipInput(response, true);
+        }
     }
+
+
+
+
 
     public class RegularSetup
     {

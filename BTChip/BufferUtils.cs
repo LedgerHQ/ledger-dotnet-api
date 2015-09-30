@@ -9,25 +9,25 @@ namespace BTChip
 {
     class BufferUtils
     {
-        internal static void writeUint32BE(System.IO.MemoryStream data, long index)
+        internal static void WriteUint32BE(System.IO.Stream data, long index)
         {
             var bytes = Utils.ToBytes((uint)index, false);
             data.Write(bytes, 0, bytes.Length);
         }
 
-        internal static void writeBuffer(System.IO.MemoryStream data, byte[] p)
+        internal static void WriteBuffer(System.IO.Stream data, byte[] buffer)
         {
-            throw new NotImplementedException();
+            data.Write(buffer, 0, buffer.Length);
         }
 
-        internal static void writeBuffer(System.IO.MemoryStream data, IBitcoinSerializable serializable)
+        internal static void WriteBuffer(System.IO.Stream data, IBitcoinSerializable serializable)
         {
-            writeBuffer(data, serializable.ToBytes());
+            WriteBuffer(data, serializable.ToBytes());
         }
 
-        internal static void writeBuffer(System.IO.MemoryStream data, uint v)
+        internal static void WriteBuffer(System.IO.Stream data, uint value)
         {
-            var bytes = Utils.ToBytes(v, true);
+            var bytes = Utils.ToBytes(value, true);
             data.Write(bytes, 0, bytes.Length);
         }
     }
