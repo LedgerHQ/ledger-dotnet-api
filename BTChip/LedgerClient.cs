@@ -312,12 +312,13 @@ namespace BTChip
         }
 
 
-        public void StartUntrustedTransaction(bool newTransaction, Transaction tx, int index, TrustedInput[] trustedInputs)
+        public void UntrustedHashTransactionInputStart(bool newTransaction, Transaction tx, int index, TrustedInput[] trustedInputs)
         {
-            StartUntrustedTransaction(newTransaction, tx.Inputs.AsIndexedInputs().Skip(index).First(), trustedInputs);
+            UntrustedHashTransactionInputStart(newTransaction, tx.Inputs.AsIndexedInputs().Skip(index).First(), trustedInputs);
         }
-        public void StartUntrustedTransaction(bool newTransaction, IndexedTxIn txIn, TrustedInput[] trustedInputs)
+        public void UntrustedHashTransactionInputStart(bool newTransaction, IndexedTxIn txIn, TrustedInput[] trustedInputs)
         {
+            trustedInputs = trustedInputs ?? new TrustedInput[0];
             // Start building a fake transaction with the passed inputs
             MemoryStream data = new MemoryStream();
             BufferUtils.WriteBuffer(data, txIn.Transaction.Version);
@@ -335,7 +336,7 @@ namespace BTChip
                 {
                     var b = trustedInput.ToBytes();
                     // untrusted inputs have constant length
-                    data.write(b.Length);
+                    data.write((uint)b.Length);
                     BufferUtils.WriteBuffer(data, b);
                 }
                 else
@@ -352,15 +353,15 @@ namespace BTChip
             }
         }
 
-        public byte[] FinalizeInputFull(Transaction spending)
+        public byte[] UntrustedHashTransactionInputFinalizeFull(IEnumerable<TxOut> outputs)
         {
             byte[] result = null;
             int offset = 0;
             byte[] response = null;
             var ms = new MemoryStream();
             BitcoinStream bs = new BitcoinStream(ms, true);
-            var outputs = spending.Outputs;
-            bs.ReadWrite<TxOutList, TxOut>(ref outputs);
+            var list = outputs.ToList();
+            bs.ReadWrite<List<TxOut>, TxOut>(ref list);
             var data = ms.ToArray();
 
             while(offset < data.Length)
@@ -385,6 +386,8 @@ namespace BTChip
         }
 
 
+        
+
         public TransactionSignature UntrustedHashSign(KeyPath keyPath, UserPin pin, LockTime lockTime, SigHash sigHashType)
         {
             MemoryStream data = new MemoryStream();
@@ -392,7 +395,7 @@ namespace BTChip
             BufferUtils.WriteBuffer(data, path);
 
             var pinBytes = pin == null ? new byte[0] : pin.ToBytes();
-            data.write(pinBytes.Length);
+            data.WriteByte((byte)pinBytes.Length);
             BufferUtils.WriteBuffer(data, pinBytes);
             BufferUtils.WriteUint32BE(data, (uint)lockTime);
             data.WriteByte((byte)sigHashType);

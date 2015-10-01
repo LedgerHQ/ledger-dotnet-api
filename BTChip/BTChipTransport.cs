@@ -1,5 +1,6 @@
 ﻿using HidLibrary;
 using Microsoft.Win32.SafeHandles;
+using NBitcoin;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -12,15 +13,9 @@ namespace BTChip
 {
     public static class Ext
     {
-        public static void write(this Stream stream, int value)
+        public static void write(this Stream stream, uint value)
         {
-            var bytes = new byte[]
-				{
-					(byte)(value >> 24),
-					(byte)(value >> 16),
-					(byte)(value >> 8),
-					(byte)value,
-				};
+            var bytes = Utils.ToBytes(value, false);
             stream.Write(bytes, 0, bytes.Length);
         }
     }

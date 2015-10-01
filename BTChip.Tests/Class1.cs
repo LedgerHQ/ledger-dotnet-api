@@ -36,6 +36,7 @@ namespace BTChip.Tests
 
 
 
+
         [Fact]
         [Trait("Manual", "Manual")]
         public void CanSignTransaction()
@@ -52,22 +53,26 @@ namespace BTChip.Tests
             funding.Outputs.Add(new TxOut(Money.Coins(1.0m), BitcoinAddress.Create("15sYbVpRh6dyWycZMwPdxJWD4xbfxReeHe")));
             funding.Outputs.Add(new TxOut(Money.Coins(1.2m), BitcoinAddress.Create("1PcLMBsvjkqvs9MaENqHNBpa91atjm89Lb")));
 
-            var input = ledger.GetTrustedInput(funding, 0);
-            var input2 = ledger.GetTrustedInput(funding, 2);
-            Assert.Equal(Money.Coins(1.2m), input2.Amount);
-
             var spending = new Transaction();
             spending.Inputs.AddRange(funding.Outputs.AsCoins().Select(o => new TxIn(o.Outpoint, o.ScriptPubKey)));
             spending.Outputs.Add(new TxOut(Money.Coins(0.5m), BitcoinAddress.Create("15sYbVpRh6dyWycZMwPdxJWD4xbfxReeHe")));
+            
 
-            ledger.StartUntrustedTransaction(true, spending, 0, new[] { input, input2 });
-            ledger.StartUntrustedTransaction(false, spending, 1, new[] { input, input2 });
-            ledger.StartUntrustedTransaction(false, spending, 2, new[] { input, input2 });
 
-            //ledger.VerifyPin("1234");
-            //ledger.FinalizeInputFull(spending);
+            for(int i = 0; i < spending.Inputs.Count; i++)
+            {
+                ledger.UntrustedHashTransactionInputStart(true, spending, i, null);
+                var result = ledger.UntrustedHashTransactionInputFinalizeFull(spending.Outputs);
+                Assert.True(result[0] == 0x00); //No confirmation
 
-            var b = ledger.UntrustedHashSign(new KeyPath(1), new UserPin("1234"), new LockTime(), SigHash.All);
+                var sig = ledger.UntrustedHashSign(new KeyPath(1), null, 0, SigHash.All);
+            }
+
+            var privateKey = new ExtKey(GetSeed()).Derive(1).PrivateKey;
+            Assert.True(privateKey.PubKey.Hash == BitcoinAddress.Create("1PcLMBsvjkqvs9MaENqHNBpa91atjm89Lb").Hash);
+            var inputs = funding.Inputs.AsIndexedInputs().ToArray();
+            var sigg = inputs[0].Sign(privateKey, inputs[0].TxIn.ScriptSig, SigHash.All);
+
         }
 
         [Fact]
