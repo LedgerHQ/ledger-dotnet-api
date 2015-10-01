@@ -336,7 +336,7 @@ namespace BTChip
                 {
                     var b = trustedInput.ToBytes();
                     // untrusted inputs have constant length
-                    data.write((uint)b.Length);
+                    data.WriteByte((byte)b.Length);
                     BufferUtils.WriteBuffer(data, b);
                 }
                 else

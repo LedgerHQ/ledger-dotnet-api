@@ -52,8 +52,11 @@ namespace BTChip.Tests
             var coins = funding.Outputs.AsCoins();
 
             var spending = new Transaction();
+            spending.LockTime = 1;
             spending.Inputs.AddRange(coins.Select(o => new TxIn(o.Outpoint, o.ScriptPubKey)));
             spending.Outputs.Add(new TxOut(Money.Coins(0.5m), BitcoinAddress.Create("15sYbVpRh6dyWycZMwPdxJWD4xbfxReeHe")));
+
+            var trusted = ledger.GetTrustedInput(funding, 1);
 
             var privateKey = new ExtKey(GetSeed()).Derive(1).PrivateKey;
             Assert.True(privateKey.PubKey.Hash == BitcoinAddress.Create("1PcLMBsvjkqvs9MaENqHNBpa91atjm89Lb").Hash);
@@ -61,11 +64,12 @@ namespace BTChip.Tests
             var inputs = spending.Inputs.AsIndexedInputs().ToArray();
             for(int i = 0; i < spending.Inputs.Count; i++)
             {
-                ledger.UntrustedHashTransactionInputStart(i == 0, spending, i, null);
+                ledger.UntrustedHashTransactionInputStart(i == 0, spending, i, new[] { trusted });
+
                 var result = ledger.UntrustedHashTransactionInputFinalizeFull(spending.Outputs);
                 Assert.True(result[0] == 0x00); //No confirmation
 
-                var sig = ledger.UntrustedHashSign(new KeyPath(1), null, 0, SigHash.All);
+                var sig = ledger.UntrustedHashSign(new KeyPath(1), null, spending.LockTime, SigHash.All);
                 var expectedSig = inputs[i].Sign(privateKey, inputs[i].TxIn.ScriptSig, SigHash.All);
                 Assert.Equal(sig, expectedSig);
             }

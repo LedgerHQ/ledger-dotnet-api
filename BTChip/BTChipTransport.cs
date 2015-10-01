@@ -11,14 +11,6 @@ using System.Threading.Tasks;
 
 namespace BTChip
 {
-    public static class Ext
-    {
-        public static void write(this Stream stream, uint value)
-        {
-            var bytes = Utils.ToBytes(value, false);
-            stream.Write(bytes, 0, bytes.Length);
-        }
-    }
     internal class BTChipTransport
     {
         HidDevice _Device;
