@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<package >
+	<metadata>
+		<id>LedgerWallet</id>
+		<version>$version$</version>
+		<title>Ledger Wallet API</title>
+		<authors>Ledger SAS</authors>
+		<owners>Ledger SAS</owners>
+		<iconUrl>https://www.ledgerwallet.com/images/logo-ledger-medium.png</iconUrl>
+		<requireLicenseAcceptance>false</requireLicenseAcceptance>
+		<description>Client API for Ledger Wallet</description>
+		<summary></summary>
+		<projectUrl>https://github.com/LedgerHQ/ledger-dotnet-api</projectUrl>
+		<copyright>Copyright 2015</copyright>
+		<tags>bitcoin</tags>
+		<dependencies>
+		</dependencies>
+	</metadata>
+	<files>
+		<file src="build\LedgerWallet.targets" target="build" />
+	</files>
+</package>

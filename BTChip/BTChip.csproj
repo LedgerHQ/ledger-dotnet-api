@@ -29,6 +29,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="HidLibrary">
@@ -76,7 +77,10 @@
     <Compile Include="VarintUtils.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="BTChip.nuspec" />
+    <None Include="build\LedgerWallet.targets" />
     <None Include="packages.config" />
+    <None Include="PushNuget.ps1" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="x64\hidapi.dll">
