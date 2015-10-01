@@ -45,33 +45,30 @@ namespace BTChip.Tests
             var ledger = GetLedger();
             ledger.VerifyPin("1234");
             Transaction funding = new Transaction();
-            funding.Inputs.Add(new TxIn(OutPoint.Parse("000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f-0"), BitcoinAddress.Create("1PcLMBsvjkqvs9MaENqHNBpa91atjm89Lb").ScriptPubKey));
-            funding.Inputs.Add(new TxIn(OutPoint.Parse("000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f-1"), BitcoinAddress.Create("15sYbVpRh6dyWycZMwPdxJWD4xbfxReeHe").ScriptPubKey));
-            funding.Inputs.Add(new TxIn(OutPoint.Parse("000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f-2"), BitcoinAddress.Create("1PcLMBsvjkqvs9MaENqHNBpa91atjm89Lb").ScriptPubKey));
-
             funding.Outputs.Add(new TxOut(Money.Coins(1.1m), BitcoinAddress.Create("1PcLMBsvjkqvs9MaENqHNBpa91atjm89Lb")));
-            funding.Outputs.Add(new TxOut(Money.Coins(1.0m), BitcoinAddress.Create("15sYbVpRh6dyWycZMwPdxJWD4xbfxReeHe")));
+            funding.Outputs.Add(new TxOut(Money.Coins(1.0m), BitcoinAddress.Create("1PcLMBsvjkqvs9MaENqHNBpa91atjm89Lb")));
             funding.Outputs.Add(new TxOut(Money.Coins(1.2m), BitcoinAddress.Create("1PcLMBsvjkqvs9MaENqHNBpa91atjm89Lb")));
 
+            var coins = funding.Outputs.AsCoins();
+
             var spending = new Transaction();
-            spending.Inputs.AddRange(funding.Outputs.AsCoins().Select(o => new TxIn(o.Outpoint, o.ScriptPubKey)));
+            spending.Inputs.AddRange(coins.Select(o => new TxIn(o.Outpoint, o.ScriptPubKey)));
             spending.Outputs.Add(new TxOut(Money.Coins(0.5m), BitcoinAddress.Create("15sYbVpRh6dyWycZMwPdxJWD4xbfxReeHe")));
-            
 
+            var privateKey = new ExtKey(GetSeed()).Derive(1).PrivateKey;
+            Assert.True(privateKey.PubKey.Hash == BitcoinAddress.Create("1PcLMBsvjkqvs9MaENqHNBpa91atjm89Lb").Hash);
 
+            var inputs = spending.Inputs.AsIndexedInputs().ToArray();
             for(int i = 0; i < spending.Inputs.Count; i++)
             {
-                ledger.UntrustedHashTransactionInputStart(true, spending, i, null);
+                ledger.UntrustedHashTransactionInputStart(i == 0, spending, i, null);
                 var result = ledger.UntrustedHashTransactionInputFinalizeFull(spending.Outputs);
                 Assert.True(result[0] == 0x00); //No confirmation
 
                 var sig = ledger.UntrustedHashSign(new KeyPath(1), null, 0, SigHash.All);
+                var expectedSig = inputs[i].Sign(privateKey, inputs[i].TxIn.ScriptSig, SigHash.All);
+                Assert.Equal(sig, expectedSig);
             }
-
-            var privateKey = new ExtKey(GetSeed()).Derive(1).PrivateKey;
-            Assert.True(privateKey.PubKey.Hash == BitcoinAddress.Create("1PcLMBsvjkqvs9MaENqHNBpa91atjm89Lb").Hash);
-            var inputs = funding.Inputs.AsIndexedInputs().ToArray();
-            var sigg = inputs[0].Sign(privateKey, inputs[0].TxIn.ScriptSig, SigHash.All);
 
         }
 

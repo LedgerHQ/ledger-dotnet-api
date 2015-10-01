@@ -322,7 +322,7 @@ namespace BTChip
             // Start building a fake transaction with the passed inputs
             MemoryStream data = new MemoryStream();
             BufferUtils.WriteBuffer(data, txIn.Transaction.Version);
-            VarintUtils.write(data, trustedInputs.Length);
+            VarintUtils.write(data, txIn.Transaction.Inputs.Count);
             ExchangeApdu(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_HASH_INPUT_START, (byte)0x00, (newTransaction ? (byte)0x00 : (byte)0x80), data.ToArray(), OK);
             // Loop for each input
             long currentIndex = 0;
@@ -331,7 +331,7 @@ namespace BTChip
                 var trustedInput = trustedInputs.FirstOrDefault(i => i.OutPoint == input.PrevOut);
                 byte[] script = (currentIndex == txIn.Index ? txIn.TxIn.ScriptSig.ToBytes() : new byte[0]);
                 data = new MemoryStream();
-                data.write(trustedInput != null ? (byte)0x01 : (byte)0x00);
+                data.WriteByte(trustedInput != null ? (byte)0x01 : (byte)0x00);
                 if(trustedInput != null)
                 {
                     var b = trustedInput.ToBytes();
