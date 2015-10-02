@@ -12,7 +12,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BTChip
+namespace LedgerWallet
 {
     public class LedgerClient
     {
@@ -39,7 +39,7 @@ namespace BTChip
 
         private HidDevice _Device;
 
-        private static int[] OK = new[] { BTChipConstants.SW_OK };
+        private static int[] OK = new[] { LedgerWalletConstants.SW_OK };
 
 
         internal LedgerClient(HidDevice device)
@@ -57,20 +57,20 @@ namespace BTChip
             }
         }
 
-        BTChipTransport _Transport;
+        LedgerWalletTransport _Transport;
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-        private BTChipTransport Transport
+        private LedgerWalletTransport Transport
         {
             get
             {
-                _Transport = _Transport ?? new BTChipTransport(_Device);
+                _Transport = _Transport ?? new LedgerWalletTransport(_Device);
                 if(!_Device.IsConnected)
                 {
-                    throw new BTChipException("The device is not connected");
+                    throw new LedgerWalletException("The device is not connected");
                 }
                 if(!_Device.IsOpen)
                 {
-                    throw new BTChipException("Error while opening the device");
+                    throw new LedgerWalletException("Error while opening the device");
                 }
                 return _Transport;
             }
@@ -144,7 +144,7 @@ namespace BTChip
         {
             if(!acceptedSW.Contains(sw))
             {
-                throw new BTChipException(sw);
+                throw new LedgerWalletException(sw);
             }
         }
 
@@ -182,32 +182,32 @@ namespace BTChip
         {
             byte[] response = Transport.Exchange(apdu);
             if(response == null)
-                throw new BTChipException("Error while transmission");
+                throw new LedgerWalletException("Error while transmission");
             if(response.Length < 2)
             {
-                throw new BTChipException("Truncated response");
+                throw new LedgerWalletException("Truncated response");
             }
             sw = ((int)(response[response.Length - 2] & 0xff) << 8) |
                     (int)(response[response.Length - 1] & 0xff);
             if(sw == 0x6faa)
-                throw new BTChipException(sw);
+                throw new LedgerWalletException(sw);
             byte[] result = new byte[response.Length - 2];
             Array.Copy(response, 0, result, 0, response.Length - 2);
             return result;
         }
 
 
-        public BTChipFirmware GetFirmwareVersion()
+        public LedgerWalletFirmware GetFirmwareVersion()
         {
-            byte[] response = ExchangeApdu(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_GET_FIRMWARE_VERSION, (byte)0x00, (byte)0x00, 0x00, OK);
-            return new BTChipFirmware(response);
+            byte[] response = ExchangeApdu(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_FIRMWARE_VERSION, (byte)0x00, (byte)0x00, 0x00, OK);
+            return new LedgerWalletFirmware(response);
         }
 
         public GetWalletPubKeyResponse GetWalletPubKey(KeyPath keyPath)
         {
             Guard.AssertKeyPath(keyPath);
             byte[] bytes = Serializer.Serialize(keyPath);
-            byte[] response = ExchangeApdu(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_GET_WALLET_PUBLIC_KEY, (byte)0x00, (byte)0x00, bytes, OK);
+            byte[] response = ExchangeApdu(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_WALLET_PUBLIC_KEY, (byte)0x00, (byte)0x00, bytes, OK);
             return new GetWalletPubKeyResponse(response);
         }
 
@@ -219,8 +219,8 @@ namespace BTChip
         {
             int lastSW;
             remaining = 3;
-            var response = ExchangeApdu(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_VERIFY_PIN, 0, 0, pin.ToBytes(), out lastSW);
-            if(lastSW == BTChipConstants.SW_OK)
+            var response = ExchangeApdu(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_VERIFY_PIN, 0, 0, pin.ToBytes(), out lastSW);
+            if(lastSW == LedgerWalletConstants.SW_OK)
                 return true;
             remaining = (lastSW & 0x0F);
             return false;
@@ -228,7 +228,7 @@ namespace BTChip
         public int GetRemainingAttempts()
         {
             int lastSW;
-            var response = ExchangeApdu(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_VERIFY_PIN, 0x80, 0, new byte[] { 1 }, out lastSW);
+            var response = ExchangeApdu(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_VERIFY_PIN, 0x80, 0, new byte[] { 1 }, out lastSW);
             return (lastSW & 0x0F);
         }
 
@@ -245,24 +245,24 @@ namespace BTChip
 
         public OperationMode GetOperationMode()
         {
-            var response = ExchangeApdu(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_GET_OPERATION_MODE, 0, 0, 0, OK);
+            var response = ExchangeApdu(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_OPERATION_MODE, 0, 0, 0, OK);
             return (OperationMode)response[0];
         }
 
         public SecondFactorMode GetSecondFactorMode()
         {
-            var response = ExchangeApdu(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_GET_OPERATION_MODE, 1, 0, 0, OK);
+            var response = ExchangeApdu(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_OPERATION_MODE, 1, 0, 0, OK);
             return (SecondFactorMode)response[0];
         }
 
         public void SetOperationMode(OperationMode value)
         {
-            ExchangeApdu(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_SET_OPERATION_MODE, 0, 0, new[] { (byte)value }, OK);
+            ExchangeApdu(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_SET_OPERATION_MODE, 0, 0, new[] { (byte)value }, OK);
         }
 
         public SetupResponse RegularSetup(RegularSetup setup)
         {
-            var response = ExchangeApdu(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_SETUP, 0, 0, setup.ToBytes(), OK);
+            var response = ExchangeApdu(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_SETUP, 0, 0, setup.ToBytes(), OK);
             return new SetupResponse(response);
         }
 
@@ -279,35 +279,35 @@ namespace BTChip
             BufferUtils.WriteUint32BE(data, outputIndex);
             BufferUtils.WriteBuffer(data, transaction.Version);
             VarintUtils.write(data, transaction.Inputs.Count);
-            ExchangeApdu(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_GET_TRUSTED_INPUT, (byte)0x00, (byte)0x00, data.ToArray(), OK);
+            ExchangeApdu(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_TRUSTED_INPUT, (byte)0x00, (byte)0x00, data.ToArray(), OK);
             // Each input
             foreach(var input in transaction.Inputs)
             {
                 data = new MemoryStream();
                 BufferUtils.WriteBuffer(data, input.PrevOut);
                 VarintUtils.write(data, input.ScriptSig.Length);
-                ExchangeApdu(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_GET_TRUSTED_INPUT, (byte)0x80, (byte)0x00, data.ToArray(), OK);
+                ExchangeApdu(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_TRUSTED_INPUT, (byte)0x80, (byte)0x00, data.ToArray(), OK);
                 data = new MemoryStream();
                 BufferUtils.WriteBuffer(data, input.ScriptSig.ToBytes());
-                ExchangeApduSplit2(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_GET_TRUSTED_INPUT, (byte)0x80, (byte)0x00, data.ToArray(), Utils.ToBytes(input.Sequence, true), OK);
+                ExchangeApduSplit2(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_TRUSTED_INPUT, (byte)0x80, (byte)0x00, data.ToArray(), Utils.ToBytes(input.Sequence, true), OK);
             }
             // Number of outputs
             data = new MemoryStream();
             VarintUtils.write(data, transaction.Outputs.Count);
-            ExchangeApdu(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_GET_TRUSTED_INPUT, (byte)0x80, (byte)0x00, data.ToArray(), OK);
+            ExchangeApdu(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_TRUSTED_INPUT, (byte)0x80, (byte)0x00, data.ToArray(), OK);
             // Each output
             foreach(var output in transaction.Outputs)
             {
                 data = new MemoryStream();
                 BufferUtils.WriteBuffer(data, Utils.ToBytes((ulong)output.Value.Satoshi, true));
                 VarintUtils.write(data, output.ScriptPubKey.Length);
-                ExchangeApdu(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_GET_TRUSTED_INPUT, (byte)0x80, (byte)0x00, data.ToArray(), OK);
+                ExchangeApdu(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_TRUSTED_INPUT, (byte)0x80, (byte)0x00, data.ToArray(), OK);
                 data = new MemoryStream();
                 BufferUtils.WriteBuffer(data, output.ScriptPubKey.ToBytes());
-                ExchangeApduSplit(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_GET_TRUSTED_INPUT, (byte)0x80, (byte)0x00, data.ToArray(), OK);
+                ExchangeApduSplit(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_TRUSTED_INPUT, (byte)0x80, (byte)0x00, data.ToArray(), OK);
             }
             // Locktime
-            byte[] response = ExchangeApdu(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_GET_TRUSTED_INPUT, (byte)0x80, (byte)0x00, transaction.LockTime.ToBytes(), OK);
+            byte[] response = ExchangeApdu(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_TRUSTED_INPUT, (byte)0x80, (byte)0x00, transaction.LockTime.ToBytes(), OK);
             return new TrustedInput(response);
         }
 
@@ -323,7 +323,7 @@ namespace BTChip
             MemoryStream data = new MemoryStream();
             BufferUtils.WriteBuffer(data, txIn.Transaction.Version);
             VarintUtils.write(data, txIn.Transaction.Inputs.Count);
-            ExchangeApdu(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_HASH_INPUT_START, (byte)0x00, (newTransaction ? (byte)0x00 : (byte)0x80), data.ToArray(), OK);
+            ExchangeApdu(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_HASH_INPUT_START, (byte)0x00, (newTransaction ? (byte)0x00 : (byte)0x80), data.ToArray(), OK);
             // Loop for each input
             long currentIndex = 0;
             foreach(var input in txIn.Transaction.Inputs)
@@ -344,11 +344,11 @@ namespace BTChip
                     BufferUtils.WriteBuffer(data, input.PrevOut);
                 }
                 VarintUtils.write(data, script.Length);
-                ExchangeApdu(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_HASH_INPUT_START, (byte)0x80, (byte)0x00, data.ToArray(), OK);
+                ExchangeApdu(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_HASH_INPUT_START, (byte)0x80, (byte)0x00, data.ToArray(), OK);
                 data = new MemoryStream();
                 BufferUtils.WriteBuffer(data, script);
                 BufferUtils.WriteBuffer(data, input.Sequence);
-                ExchangeApduSplit(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_HASH_INPUT_START, (byte)0x80, (byte)0x00, data.ToArray(), OK);
+                ExchangeApduSplit(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_HASH_INPUT_START, (byte)0x80, (byte)0x00, data.ToArray(), OK);
                 currentIndex++;
             }
         }
@@ -368,8 +368,8 @@ namespace BTChip
             {
                 int blockLength = ((data.Length - offset) > 255 ? 255 : data.Length - offset);
                 byte[] apdu = new byte[blockLength + 5];
-                apdu[0] = BTChipConstants.BTCHIP_CLA;
-                apdu[1] = BTChipConstants.BTCHIP_INS_HASH_INPUT_FINALIZE_FULL;
+                apdu[0] = LedgerWalletConstants.LedgerWallet_CLA;
+                apdu[1] = LedgerWalletConstants.LedgerWallet_INS_HASH_INPUT_FINALIZE_FULL;
                 apdu[2] = ((offset + blockLength) == data.Length ? (byte)0x80 : (byte)0x00);
                 apdu[3] = (byte)0x00;
                 apdu[4] = (byte)(blockLength);
@@ -380,7 +380,7 @@ namespace BTChip
             result = response; //convertResponseToOutput(response);
             if(result == null)
             {
-                throw new BTChipException("Unsupported user confirmation method");
+                throw new LedgerWalletException("Unsupported user confirmation method");
             }
             return result;
         }
@@ -399,7 +399,7 @@ namespace BTChip
             BufferUtils.WriteBuffer(data, pinBytes);
             BufferUtils.WriteUint32BE(data, (uint)lockTime);
             data.WriteByte((byte)sigHashType);
-            byte[] response = ExchangeApdu(BTChipConstants.BTCHIP_CLA, BTChipConstants.BTCHIP_INS_HASH_SIGN, (byte)0x00, (byte)0x00, data.ToArray(), OK);
+            byte[] response = ExchangeApdu(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_HASH_SIGN, (byte)0x00, (byte)0x00, data.ToArray(), OK);
             response[0] = (byte)0x30;
             return new TransactionSignature(response);
         }
@@ -562,15 +562,15 @@ namespace BTChip
     }
 
 
-    //https://ledgerhq.github.io/btchip-doc/bitcoin-technical.html#_get_firmware_version
-    public class BTChipFirmware
+    //https://ledgerhq.github.io/LedgerWallet-doc/bitcoin-technical.html#_get_firmware_version
+    public class LedgerWalletFirmware
     {
-        public BTChipFirmware(int major, int minor, int patch, bool compressedKeys)
+        public LedgerWalletFirmware(int major, int minor, int patch, bool compressedKeys)
         {
 
         }
 
-        public BTChipFirmware(byte[] bytes)
+        public LedgerWalletFirmware(byte[] bytes)
         {
             _Features = (FirmwareFeatures)(bytes[0] & ~0xC0);
             _Architecture = bytes[1];

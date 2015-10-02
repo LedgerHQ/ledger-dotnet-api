@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using NBitcoin;
 
-namespace BTChip
+namespace LedgerWallet
 {
     public class TrustedInput
     {

@@ -9,13 +9,13 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BTChip
+namespace LedgerWallet
 {
-    internal class BTChipTransport
+    internal class LedgerWalletTransport
     {
         HidDevice _Device;
         int TAG_APDU = 0x05;
-        public BTChipTransport(HidDevice device)
+        public LedgerWalletTransport(HidDevice device)
         {
             if(!device.IsOpen)
                 device.OpenDevice();

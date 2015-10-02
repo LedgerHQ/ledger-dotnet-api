@@ -1,5 +1,5 @@
 del *.nupkg
-C:\Windows\Microsoft.NET\Framework\v4.0.30319\msbuild.exe "..\BTChip\BTChip.csproj" -p:Configuration=Release
+C:\Windows\Microsoft.NET\Framework\v4.0.30319\msbuild.exe "..\LedgerWallet\LedgerWallet.csproj" -p:Configuration=Release
 
 nuGet pack
 

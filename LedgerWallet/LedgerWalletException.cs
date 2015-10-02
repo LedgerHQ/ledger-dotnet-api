@@ -4,38 +4,38 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BTChip
+namespace LedgerWallet
 {
-    public class BTChipException : Exception
+    public class LedgerWalletException : Exception
     {
-        public BTChipException(string message)
+        public LedgerWalletException(string message)
             : base(message)
         {
         }
-        public BTChipException(string message, int sw)
-            : this(message, new BTChipStatus(sw))
+        public LedgerWalletException(string message, int sw)
+            : this(message, new LedgerWalletStatus(sw))
         {
 
         }
 
-        public BTChipException(int sw)
-            : this(new BTChipStatus(sw))
+        public LedgerWalletException(int sw)
+            : this(new LedgerWalletStatus(sw))
         {
         }
-        public BTChipException(BTChipStatus status)
+        public LedgerWalletException(LedgerWalletStatus status)
             : this(status.GetMessage(), status)
         {
 
         }
 
-        public BTChipException(string message, BTChipStatus status)
+        public LedgerWalletException(string message, LedgerWalletStatus status)
             : base(message)
         {
             _Status = status;
         }
 
-        private readonly BTChipStatus _Status;
-        public BTChipStatus Status
+        private readonly LedgerWalletStatus _Status;
+        public LedgerWalletStatus Status
         {
             get
             {
@@ -44,9 +44,9 @@ namespace BTChip
         }
     }
 
-    public class BTChipStatus
+    public class LedgerWalletStatus
     {
-        public BTChipStatus(int sw)
+        public LedgerWalletStatus(int sw)
         {
             _SW = sw;
         }

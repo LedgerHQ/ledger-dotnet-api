@@ -8,7 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Xunit;
 
-namespace BTChip.Tests
+namespace LedgerWallet.Tests
 {
     public class Class1
     {
@@ -153,7 +153,7 @@ namespace BTChip.Tests
             ledger.VerifyPin("1235", out tries);
             Assert.Equal(2, tries);
 
-            var ex = Assert.Throws<BTChipException>(() => tries = ledger.GetRemainingAttempts());
+            var ex = Assert.Throws<LedgerWalletException>(() => tries = ledger.GetRemainingAttempts());
             Assert.NotNull(ex.Status);
             Assert.NotNull(ex.Status.SW == 0x6FAA);
             Assert.NotNull(ex.Status.InternalSW == 0x00AA);
