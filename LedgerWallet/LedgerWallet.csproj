@@ -77,7 +77,7 @@
     <Compile Include="VarintUtils.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="BTChip.nuspec" />
+    <None Include="LedgerWallet.nuspec" />
     <None Include="build\LedgerWallet.targets" />
     <None Include="packages.config" />
     <None Include="PushNuget.ps1" />
