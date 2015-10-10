@@ -645,7 +645,7 @@ namespace LedgerWallet
             }
         }
 
-        public string ToString()
+        public override string ToString()
         {
             return (Architecture != 0 ? "Ledger " : "") + string.Format("{0}.{1}.{2} (Loader : {3}.{4})", Major, Minor, Patch, LoaderMajor, LoaderMinor);
         }
