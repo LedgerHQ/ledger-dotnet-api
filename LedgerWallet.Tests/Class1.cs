@@ -34,7 +34,51 @@ namespace LedgerWallet.Tests
             return Encoders.Hex.DecodeData("1c241d6e8e26990c8b913191d4c1b6cf5d42a63bbd5bffdd90dea34f34ff5a334542db021ae621c0f16cfc39c70e1c23ccbede464851cd5ceaf67266b151f0c2");
         }
 
+        void Ignore(Action act)
+        {
+            try
+            {
+                act();
+            }
+            catch { }
+        }
 
+        [Fact]
+        [Trait("Manual", "Manual")]
+        public void CanSignTransactionStandardMode()
+        {
+            var ledger = GetLedger();
+            Ignore(() => ledger.VerifyPin("1234"));
+
+            var walletPubKey = ledger.GetWalletPubKey(new KeyPath("1'/0"));
+            var address = (BitcoinAddress)walletPubKey.Address;
+            
+            Transaction funding = new Transaction();
+            funding.AddInput(Network.Main.GetGenesis().Transactions[0].Inputs[0]);
+            funding.Outputs.Add(new TxOut(Money.Coins(1.1m), address));
+            funding.Outputs.Add(new TxOut(Money.Coins(1.0m), address));
+            funding.Outputs.Add(new TxOut(Money.Coins(1.2m), address));
+
+            var coins = funding.Outputs.AsCoins();
+
+            var spending = new Transaction();
+            spending.LockTime = 1;
+            spending.Inputs.AddRange(coins.Select(o => new TxIn(o.Outpoint, o.ScriptPubKey)));
+            spending.Outputs.Add(new TxOut(Money.Coins(0.5m), BitcoinAddress.Create("15sYbVpRh6dyWycZMwPdxJWD4xbfxReeHe")));
+            spending.Outputs.Add(new TxOut(Money.Zero, TxNullDataTemplate.Instance.GenerateScriptPubKey(new byte[] { 1, 2 })));                 
+
+            var signed = ledger.SignTransaction(
+              new KeyPath("1'/0"),
+              new Coin[]
+            {
+                new Coin(funding, 0),
+                new Coin(funding, 1),
+                new Coin(funding, 2),
+            }, new Transaction[]
+            {
+                funding
+            }, spending);
+        }
 
 
         [Fact]
@@ -59,7 +103,7 @@ namespace LedgerWallet.Tests
             var trusted = ledger.GetTrustedInput(funding, 1);
 
             var privateKey = new ExtKey(GetSeed()).Derive(1).PrivateKey;
-            Assert.True(privateKey.PubKey.Hash == BitcoinAddress.Create("1PcLMBsvjkqvs9MaENqHNBpa91atjm89Lb").Hash);
+            Assert.True(privateKey.PubKey.Hash == ((BitcoinPubKeyAddress)BitcoinAddress.Create("1PcLMBsvjkqvs9MaENqHNBpa91atjm89Lb")).Hash);
 
             var inputs = spending.Inputs.AsIndexedInputs().ToArray();
             for(int i = 0; i < spending.Inputs.Count; i++)
@@ -69,8 +113,8 @@ namespace LedgerWallet.Tests
                 var result = ledger.UntrustedHashTransactionInputFinalizeFull(spending.Outputs);
                 Assert.True(result[0] == 0x00); //No confirmation
 
-                var sig = ledger.UntrustedHashSign(new KeyPath(1), null, spending.LockTime, SigHash.All);
-                var expectedSig = inputs[i].Sign(privateKey, inputs[i].TxIn.ScriptSig, SigHash.All);
+                var sig = ledger.UntrustedHashSign(new KeyPath("1'/0"), null, spending.LockTime, SigHash.All);
+                var expectedSig = inputs[i].Sign(privateKey, new Coin(inputs[i].PrevOut, new TxOut(Money.Zero, inputs[i].TxIn.ScriptSig)), SigHash.All);
                 Assert.Equal(sig, expectedSig);
             }
 

@@ -317,7 +317,6 @@ namespace LedgerWallet
             return new TrustedInput(response);
         }
 
-
         public void UntrustedHashTransactionInputStart(bool newTransaction, Transaction tx, int index, TrustedInput[] trustedInputs)
         {
             UntrustedHashTransactionInputStart(newTransaction, tx.Inputs.AsIndexedInputs().Skip(index).First(), trustedInputs);
@@ -337,9 +336,9 @@ namespace LedgerWallet
                 var trustedInput = trustedInputs.FirstOrDefault(i => i.OutPoint == input.PrevOut);
                 byte[] script = (currentIndex == txIn.Index ? txIn.TxIn.ScriptSig.ToBytes() : new byte[0]);
                 data = new MemoryStream();
-                data.WriteByte(trustedInput != null ? (byte)0x01 : (byte)0x00);
                 if(trustedInput != null)
                 {
+                    data.WriteByte(0x01);
                     var b = trustedInput.ToBytes();
                     // untrusted inputs have constant length
                     data.WriteByte((byte)b.Length);
@@ -347,6 +346,7 @@ namespace LedgerWallet
                 }
                 else
                 {
+                    data.WriteByte(0x00);
                     BufferUtils.WriteBuffer(data, input.PrevOut);
                 }
                 VarintUtils.write(data, script.Length);
@@ -392,7 +392,56 @@ namespace LedgerWallet
         }
 
 
-        
+        public Transaction SignTransaction(KeyPath keyPath, ICoin[] signedCoins, Transaction[] parents, Transaction transaction)
+        {
+            var pubkey = GetWalletPubKey(keyPath).UncompressedPublicKey.Compress();
+            var parentsById = parents.ToDictionary(p => p.GetHash());
+            var coinsByPrevout = signedCoins.ToDictionary(c => c.Outpoint);
+
+            List<TrustedInput> trustedInputs = new List<TrustedInput>();
+            foreach(var input in transaction.Inputs)
+            {
+                Transaction parent;
+                parentsById.TryGetValue(input.PrevOut.Hash, out parent);
+                if(parent == null)
+                    throw new KeyNotFoundException("Parent transaction " + input.PrevOut.Hash + " not found");
+                trustedInputs.Add(GetTrustedInput(parent, (int)input.PrevOut.N));
+            }
+
+            var inputs = trustedInputs.ToArray();
+
+            transaction = transaction.Clone();
+
+            foreach(var input in transaction.Inputs)
+            {
+                ICoin previousCoin = null;
+                coinsByPrevout.TryGetValue(input.PrevOut, out previousCoin);
+
+                if(previousCoin != null)
+                    input.ScriptSig = previousCoin.GetScriptCode();
+            }
+            
+            bool newTransaction = true;
+            foreach(var input in transaction.Inputs.AsIndexedInputs())
+            {
+                ICoin coin = null;
+                if(!coinsByPrevout.TryGetValue(input.PrevOut, out coin))
+                    continue;
+
+                UntrustedHashTransactionInputStart(newTransaction, input, inputs);
+                newTransaction = false;
+
+                UntrustedHashTransactionInputFinalizeFull(transaction.Outputs);
+
+                var sig = UntrustedHashSign(keyPath, null, transaction.LockTime, SigHash.All);
+                input.ScriptSig = PayToPubkeyHashTemplate.Instance.GenerateScriptSig(sig, pubkey);
+                ScriptError error;
+                if(!Script.VerifyScript(coin.TxOut.ScriptPubKey, transaction, (int)input.Index, Money.Zero, out error))
+                    return null;
+            }
+
+            return transaction;
+        }
 
         public TransactionSignature UntrustedHashSign(KeyPath keyPath, UserPin pin, LockTime lockTime, SigHash sigHashType)
         {
