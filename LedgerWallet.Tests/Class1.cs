@@ -23,7 +23,7 @@ namespace LedgerWallet.Tests
             Assert.True(firmware.ToString().Contains("Loader"));
             Assert.True(ledger.VerifyPin("1234"));
 
-            var walletPubKey = ledger.GetWalletPubKey(new KeyPath("1"));
+            var walletPubKey = ledger.GetWalletPubKey(new KeyPath("1'/0"));
             Assert.Equal("1PcLMBsvjkqvs9MaENqHNBpa91atjm89Lb", walletPubKey.Address.ToString());
             Assert.Equal("1PcLMBsvjkqvs9MaENqHNBpa91atjm89Lb", walletPubKey.UncompressedPublicKey.Compress().Hash.GetAddress(Network.Main).ToString());
             Assert.Equal("1PcLMBsvjkqvs9MaENqHNBpa91atjm89Lb", new ExtKey(GetSeed()).Neuter().Derive(1).PubKey.Hash.GetAddress(Network.Main).ToString());

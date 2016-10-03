@@ -87,6 +87,8 @@ namespace LedgerWallet
                     return "Incorrect parameter P1 or P2";
                 case 0x9000:
                     return "OK";
+                case 0x6D00:
+                    return "Insupported command";
                 default:
                     {
                         if((SW & 0xFF00) != 0x6F00)

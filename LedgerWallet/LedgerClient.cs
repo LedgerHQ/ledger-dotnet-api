@@ -77,9 +77,12 @@ namespace LedgerWallet
         }
 
 
+        //https://github.com/LedgerHQ/ledger-wallet-chrome/blob/59f52dcedc031871d17cc69eb531bc6b4cf89a6b/app/libs/btchip/btchip-js-api/chromeApp/chromeDevice.js
+        //https://github.com/LedgerHQ/ledger-wallet-chrome/blob/59f52dcedc031871d17cc69eb531bc6b4cf89a6b/app/src/dongle/manager.coffee
         public static unsafe IEnumerable<LedgerClient> GetLedgers()
         {
-            var ledgers = HidLibrary.HidDevices.Enumerate(0x2581, 0x3b7c)
+            var ledgers = HidLibrary.HidDevices.Enumerate(0x2c97)
+                            .Concat(HidLibrary.HidDevices.Enumerate(0x2581, 0x3b7c))
                             .Select(i => new LedgerClient(i))
                             .ToList();
             return ledgers;
@@ -207,6 +210,7 @@ namespace LedgerWallet
         {
             Guard.AssertKeyPath(keyPath);
             byte[] bytes = Serializer.Serialize(keyPath);
+            //bytes[0] = 10;
             byte[] response = ExchangeApdu(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_WALLET_PUBLIC_KEY, (byte)0x00, (byte)0x00, bytes, OK);
             return new GetWalletPubKeyResponse(response);
         }
@@ -222,6 +226,8 @@ namespace LedgerWallet
             var response = ExchangeApdu(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_VERIFY_PIN, 0, 0, pin.ToBytes(), out lastSW);
             if(lastSW == LedgerWalletConstants.SW_OK)
                 return true;
+            if(lastSW == LedgerWalletConstants.SW_INS_NOT_SUPPORTED)
+                throw new LedgerWalletException(lastSW);
             remaining = (lastSW & 0x0F);
             return false;
         }
