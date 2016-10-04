@@ -77,12 +77,14 @@ namespace LedgerWallet
         }
 
         LedgerWalletTransport _Transport;
+        internal bool _HasBeenOpen;
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         private LedgerWalletTransport Transport
         {
             get
             {
                 _Transport = _Transport ?? new LedgerWalletTransport(_Device);
+                _HasBeenOpen = true;
                 if(!_Device.IsConnected)
                 {
                     throw new LedgerWalletException("The device is not connected");
@@ -102,9 +104,33 @@ namespace LedgerWallet
         {
             var ledgers = HidLibrary.HidDevices.Enumerate(0x2c97)
                             .Concat(HidLibrary.HidDevices.Enumerate(0x2581, 0x3b7c))
-                            .Select(i => new LedgerClient(i))
+                            .Select(i => GetClient(i))
                             .ToList();
             return ledgers;
+        }
+
+        static Dictionary<string, LedgerClient> _ClientsByDevicePath = new Dictionary<string, LedgerClient>();
+        static LedgerClient GetClient(HidDevice device)
+        {
+            LedgerClient client = null;
+            lock(_ClientsByDevicePath)
+            {
+                _ClientsByDevicePath.TryGetValue(device.DevicePath, out client);
+                if(client != null)
+                {
+                    if(client._HasBeenOpen && (!client.Device.IsOpen || !client.Device.IsConnected))
+                    {
+                        _ClientsByDevicePath.Remove(device.DevicePath);
+                        client = null;
+                    }
+                }
+                if(client == null)
+                {
+                    client = new LedgerClient(device);
+                    _ClientsByDevicePath.Add(device.DevicePath, client);
+                }
+            }
+            return client;
         }
 
         private byte[] ExchangeApdu(byte cla, byte ins, byte p1, byte p2, byte[] data, int[] acceptedSW)
