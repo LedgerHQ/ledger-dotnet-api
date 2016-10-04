@@ -65,6 +65,7 @@ namespace LedgerWallet.Tests
             spending.LockTime = 1;
             spending.Inputs.AddRange(coins.Select(o => new TxIn(o.Outpoint, o.ScriptPubKey)));
             spending.Outputs.Add(new TxOut(Money.Coins(0.5m), BitcoinAddress.Create("15sYbVpRh6dyWycZMwPdxJWD4xbfxReeHe")));
+            spending.Outputs.Add(new TxOut(Money.Coins(0.8m), address));
             spending.Outputs.Add(new TxOut(Money.Zero, TxNullDataTemplate.Instance.GenerateScriptPubKey(new byte[] { 1, 2 })));                 
 
             var signed = ledger.SignTransaction(
