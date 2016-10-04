@@ -48,6 +48,7 @@ namespace LedgerWallet.Tests
         public void CanSignTransactionStandardMode()
         {
             var ledger = GetLedger();
+            var pubkey = ledger.GetWalletPubKey(new KeyPath("28429'/0")).UncompressedPublicKey.Compress();
             Ignore(() => ledger.VerifyPin("1234"));
 
             var walletPubKey = ledger.GetWalletPubKey(new KeyPath("1'/0"));
