@@ -13,7 +13,7 @@ namespace LedgerWallet
 {
     internal class LedgerWalletTransport
     {
-        HidDevice _Device;
+        internal HidDevice _Device;
         int TAG_APDU = 0x05;
         public LedgerWalletTransport(HidDevice device)
         {

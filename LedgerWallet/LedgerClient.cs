@@ -102,11 +102,16 @@ namespace LedgerWallet
         //https://github.com/LedgerHQ/ledger-wallet-chrome/blob/59f52dcedc031871d17cc69eb531bc6b4cf89a6b/app/src/dongle/manager.coffee
         public static unsafe IEnumerable<LedgerClient> GetLedgers()
         {
-            var ledgers = HidLibrary.HidDevices.Enumerate(0x2c97)
-                            .Concat(HidLibrary.HidDevices.Enumerate(0x2581, 0x3b7c))
+            var ledgers = EnumerateHIDDevices()
                             .Select(i => GetClient(i))
                             .ToList();
             return ledgers;
+        }
+
+        private static unsafe IEnumerable<HidDevice> EnumerateHIDDevices()
+        {
+            return HidLibrary.HidDevices.Enumerate(0x2c97)
+                                        .Concat(HidLibrary.HidDevices.Enumerate(0x2581, 0x3b7c));
         }
 
         static Dictionary<string, LedgerClient> _ClientsByDevicePath = new Dictionary<string, LedgerClient>();
@@ -230,7 +235,15 @@ namespace LedgerWallet
         {
             byte[] response = Transport.Exchange(apdu);
             if(response == null)
-                throw new LedgerWalletException("Error while transmission");
+            {
+                if(!RenewTransport())
+                {
+                    throw new LedgerWalletException("Ledger disconnected");
+                }
+                response = Transport.Exchange(apdu);
+                if(response == null)
+                    throw new LedgerWalletException("Error while transmission");
+            }
             if(response.Length < 2)
             {
                 throw new LedgerWalletException("Truncated response");
@@ -244,6 +257,15 @@ namespace LedgerWallet
             return result;
         }
 
+        private bool RenewTransport()
+        {
+            var newDevice = EnumerateHIDDevices()
+                .FirstOrDefault(hid => hid.DevicePath == Transport._Device.DevicePath);
+            if(newDevice == null)
+                return false;
+            _Transport = new LedgerWalletTransport(newDevice);
+            return true;
+        }
 
         public LedgerWalletFirmware GetFirmwareVersion()
         {
