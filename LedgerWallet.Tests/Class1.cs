@@ -227,7 +227,7 @@ namespace LedgerWallet.Tests
 
         private static LedgerClient GetLedger()
         {
-            var ledger = LedgerClient.GetLedgers().FirstOrDefault();
+            var ledger = LedgerClient.GetHIDLedgers().FirstOrDefault();
             return ledger;
         }
 

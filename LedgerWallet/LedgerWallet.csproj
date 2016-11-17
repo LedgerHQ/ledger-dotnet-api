@@ -57,10 +57,13 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Bip32EncodedKey.cs" />
+    <Compile Include="LedgerClientBase.cs" />
     <Compile Include="LedgerWalletConstants.cs" />
     <Compile Include="LedgerWalletException.cs" />
+    <Compile Include="Transports\DisposableLock.cs" />
+    <Compile Include="Transports\ILedgerTransport.cs" />
     <Compile Include="TrustedInput.cs" />
-    <Compile Include="LedgerWalletTransport.cs" />
+    <Compile Include="Transports\HIDLedgerTransport.cs" />
     <Compile Include="BufferUtils.cs" />
     <Compile Include="GetWalletPubKeyResponse.cs" />
     <Compile Include="Guard.cs" />
