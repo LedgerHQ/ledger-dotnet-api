@@ -61,7 +61,8 @@ namespace LedgerWallet.Tests
         }
 
         [Fact]
-        public void CanSignTransactionStandardMode()
+		[Trait("Manual", "Manual")]
+		public void CanSignTransactionStandardMode()
 		{
 			var ledger = GetLedger();
 

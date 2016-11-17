@@ -12,11 +12,32 @@ using System.Threading.Tasks;
 
 namespace LedgerWallet.Transports
 {
+	public class VendorProductIds
+	{
+		public VendorProductIds(int vendorId)
+		{
+			VendorId = vendorId;
+		}
+		public VendorProductIds(int vendorId, int? productId)
+		{
+			VendorId = vendorId;
+			ProductId = productId;
+		}
+		public int VendorId
+		{
+			get; set;
+		}
+		public int? ProductId
+		{
+			get; set;
+		}
+	}
 	public class HIDLedgerTransport : ILedgerTransport
 	{
 		internal HidDevice _Device;
 		const int TAG_APDU = 0x05;
 		readonly string _DevicePath;
+		readonly VendorProductIds _VendorProductIds;
 
 		[DllImport("kernel32.dll", SetLastError = true)]
 		static extern IntPtr LoadLibraryEx(string lpFileName, IntPtr hReservedNull, int dwFlags);
@@ -48,10 +69,16 @@ namespace LedgerWallet.Transports
 			}
 		}
 
-
-		public static unsafe IEnumerable<HIDLedgerTransport> GetHIDTransports()
+		public static VendorProductIds[] WellKnownLedgerWallets = new VendorProductIds[]
 		{
-			return EnumerateHIDDevices()
+			new VendorProductIds(0x2c97),
+			new VendorProductIds(0x2581, 0x3b7c)
+		};
+
+		public static unsafe IEnumerable<HIDLedgerTransport> GetHIDTransports(IEnumerable<VendorProductIds> ids = null)
+		{
+			ids = ids ?? WellKnownLedgerWallets;
+			return EnumerateHIDDevices(ids)
 							.Select(d => GetTransport(d))
 							.ToList();
 		}
@@ -62,10 +89,11 @@ namespace LedgerWallet.Transports
 			lock(_TransportsByDevicePath)
 			{
 				HIDLedgerTransport transport = null;
-				if(_TransportsByDevicePath.TryGetValue(device.DevicePath, out transport))
+				var uniqueId = string.Format("[{0},{1}]{2}", device.Attributes.VendorId, device.Attributes.ProductId, device.DevicePath);
+				if(_TransportsByDevicePath.TryGetValue(uniqueId, out transport))
 					return transport;
 				transport = new HIDLedgerTransport(device);
-				_TransportsByDevicePath.Add(device.DevicePath, transport);
+				_TransportsByDevicePath.Add(uniqueId, transport);
 				return transport;
 			}
 		}
@@ -76,8 +104,9 @@ namespace LedgerWallet.Transports
 				device.OpenDevice();
 			_Device = device;
 			_DevicePath = device.DevicePath;
+			_VendorProductIds = new VendorProductIds(device.Attributes.VendorId, device.Attributes.ProductId);
 		}
-
+		
 		internal byte[] ExchangeCore(byte[] apdu)
 		{
 			MemoryStream output = new MemoryStream();
@@ -357,10 +386,18 @@ namespace LedgerWallet.Transports
 			return (int)offsetOut;
 		}
 
-		private static unsafe IEnumerable<HidDevice> EnumerateHIDDevices()
+		private static unsafe IEnumerable<HidDevice> EnumerateHIDDevices(IEnumerable<VendorProductIds> vendorProductIds)
 		{
-			return HidLibrary.HidDevices.Enumerate(0x2c97)
-										.Concat(HidLibrary.HidDevices.Enumerate(0x2581, 0x3b7c));
+			List<HidDevice> devices = new List<HidDevice>();
+			foreach(var ids in vendorProductIds)
+			{
+				if(ids.ProductId == null)
+					devices.AddRange(HidDevices.Enumerate(ids.VendorId));
+				else
+					devices.AddRange(HidDevices.Enumerate(ids.VendorId, ids.ProductId.Value));
+
+			}
+			return devices;
 		}
 
 		DisposableLock l = new DisposableLock();
@@ -387,8 +424,11 @@ namespace LedgerWallet.Transports
 
 		private bool RenewTransport()
 		{
-			var newDevice = EnumerateHIDDevices()
-				.FirstOrDefault(hid => hid.DevicePath == _DevicePath);
+			var newDevice = EnumerateHIDDevices(new[]
+			{
+				this._VendorProductIds
+			})
+			.FirstOrDefault(hid => hid.DevicePath == _DevicePath);
 			if(newDevice == null)
 				return false;
 			_Device = newDevice;
