@@ -44,6 +44,7 @@ namespace LedgerWallet.Transports
 			_Device = device;
 			_DevicePath = device.DevicePath;
 			_VendorProductIds = new VendorProductIds(device.Attributes.VendorId, device.Attributes.ProductId);
+			ReadTimeout = TimeSpan.FromMilliseconds(DEFAULT_TIMEOUT);
 		}
 
 		bool needInit = true;
@@ -121,7 +122,7 @@ namespace LedgerWallet.Transports
 
 
 		const uint MAX_BLOCK = 64;
-		const int TIMEOUT = 20000;
+		const int DEFAULT_TIMEOUT = 20000;
 
 		internal byte[] ExchangeCore(byte[] apdu)
 		{
@@ -142,7 +143,7 @@ namespace LedgerWallet.Transports
 			int sequenceIdx = 0;
 			do
 			{
-				var result = hid_read_timeout(_Device.Handle, packet, MAX_BLOCK, TIMEOUT);
+				var result = hid_read_timeout(_Device.Handle, packet, MAX_BLOCK);
 				if(result < 0)
 					return null;
 				var commandPart = UnwrapReponseAPDU(packet, ref sequenceIdx, ref remaining);
@@ -171,20 +172,26 @@ namespace LedgerWallet.Transports
 
 		protected abstract byte[] WrapCommandAPDU(Stream apduStream, ref int sequenceIdx);
 
-		private int hid_read_timeout(IntPtr intPtr, byte[] buffer, uint offset, uint length, int milliseconds)
+
+		protected TimeSpan ReadTimeout
+		{
+			get; set;
+		}
+
+		private int hid_read_timeout(IntPtr intPtr, byte[] buffer, uint offset, uint length)
 		{
 			var bytes = new byte[length];
 			Array.Copy(buffer, offset, bytes, 0, length);
-			var result = hid_read_timeout(intPtr, bytes, (uint)length, milliseconds);
+			var result = hid_read_timeout(intPtr, bytes, (uint)length);
 			Array.Copy(bytes, 0, buffer, offset, length);
 			return result;
 		}
 
 
 
-		internal int hid_read_timeout(IntPtr hidDeviceObject, byte[] buffer, uint length, int milliseconds)
+		internal int hid_read_timeout(IntPtr hidDeviceObject, byte[] buffer, uint length)
 		{
-			var result = this._Device.Read(milliseconds);
+			var result = this._Device.Read((int)ReadTimeout.TotalMilliseconds);
 			if(result.Status == HidDeviceData.ReadStatus.Success)
 			{
 				if(result.Data.Length - 1 > length)

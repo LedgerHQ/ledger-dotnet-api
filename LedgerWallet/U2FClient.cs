@@ -7,6 +7,8 @@ using LedgerWallet.Transports;
 using NBitcoin;
 using NBitcoin.DataEncoders;
 using System.Security.Cryptography.X509Certificates;
+using System.IO;
+using System.Threading;
 
 namespace LedgerWallet.U2F
 {
@@ -136,11 +138,11 @@ namespace LedgerWallet.U2F
 			return ledgers;
 		}
 
-		public U2FRegistrationResponse Register(AppId applicationId)
+		public U2FRegistrationResponse Register(AppId applicationId, CancellationToken cancellationToken = default(CancellationToken))
 		{
-			return Register(RandomUtils.GetBytes(32), applicationId);
+			return Register(RandomUtils.GetBytes(32), applicationId, cancellationToken);
 		}
-		public U2FRegistrationResponse Register(byte[] challenge, AppId applicationId)
+		public U2FRegistrationResponse Register(byte[] challenge, AppId applicationId, CancellationToken cancellationToken = default(CancellationToken))
 		{
 			if(challenge == null)
 				throw new ArgumentNullException("challenge");
@@ -153,33 +155,36 @@ namespace LedgerWallet.U2F
 			var data = new byte[64];
 			Array.Copy(challenge, 0, data, 0, 32);
 			Array.Copy(applicationId.GetBytes(true), 0, data, 32, 32);
-			var result = this.ExchangeApdu(INS_ENROLL, 0x03, 0x00, data);
-			return new U2FRegistrationResponse(result);
+			while(true)
+			{
+				cancellationToken.ThrowIfCancellationRequested();
+				try
+				{
+
+					var result = this.ExchangeApdu(INS_ENROLL, 0x03, 0x00, data);
+					return new U2FRegistrationResponse(result);
+				}catch(LedgerWalletException ex)
+				{
+					if(ex.Status.KnownSW != WellKnownSW.ConditionsOfUseNotSatisfied)
+						throw;
+				}
+			}
 		}
 
 		private byte[] ExchangeApdu(byte ins, byte p1, byte p2, byte[] data)
 		{
-			var size = data.Length;
-			var l0 = (byte)(size >> 16);
-			var l1 = (byte)(size >> 8);
-			var l2 = (byte)(size & 0xff);
-			int offset = 0;
-			byte[] apdu = new byte[data.Length + 9];
-			apdu[offset++] = 0;
-			apdu[offset++] = ins;
-			apdu[offset++] = p1;
-			apdu[offset++] = p2;
-			apdu[offset++] = l0;
-			apdu[offset++] = l1;
-			apdu[offset++] = l2;
-			Array.Copy(data, 0, apdu, offset, data.Length);
-			offset += data.Length;
-			apdu[offset++] = 0x04;
-			apdu[offset++] = 0x00;
-
-			//00010300000040d1de4ad9257731511c9df395dfc78bf7a7a709f18761077e3d7fb4beaaed817ed2e42c173c857991d5e1b6c81f3e07cbb9d5f57431fe41997c9445c14ce61ec40400
-			//apdu = Encoders.Hex.DecodeData("00010300000040d1de4ad9257731511c9df395dfc78bf7a7a709f18761077e3d7fb4beaaed817ed2e42c173c857991d5e1b6c81f3e07cbb9d5f57431fe41997c9445c14ce61ec40400");
-			return ExchangeApdu(apdu, OK);
+			MemoryStream apduStream = new MemoryStream();
+			apduStream.WriteByte(0);
+			apduStream.WriteByte(ins);
+			apduStream.WriteByte(p1);
+			apduStream.WriteByte(p2);
+			apduStream.WriteByte((byte)(data.Length >> 16));
+			apduStream.WriteByte((byte)(data.Length >> 8));
+			apduStream.WriteByte((byte)(data.Length & 0xff));
+			apduStream.Write(data, 0, data.Length);
+			apduStream.WriteByte(0x04);
+			apduStream.WriteByte(0);
+			return ExchangeApdu(apduStream.ToArray(), OK);
 		}
 
 		protected byte[] ExchangeApduNoDataLength(byte cla, byte ins, byte p1, byte p2, byte[] data, out int sw)
