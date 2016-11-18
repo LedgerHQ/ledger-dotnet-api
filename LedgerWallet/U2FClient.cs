@@ -20,6 +20,8 @@ namespace LedgerWallet.U2F
 		{
 			if(bytes == null)
 				throw new ArgumentNullException("bytes");
+			if(bytes.Length > 255)
+				throw new ArgumentOutOfRangeException("KeyHandle size should be below 255 bytes");
 			_Bytes = bytes;
 		}
 
@@ -28,6 +30,14 @@ namespace LedgerWallet.U2F
 			if(hex == null)
 				throw new ArgumentNullException("hex");
 			_Bytes = Encoders.Hex.DecodeData(hex);
+		}
+
+		public int Length
+		{
+			get
+			{
+				return _Bytes.Length;
+			}
 		}
 
 		public byte[] GetBytes(bool @unsafe = false)
@@ -71,6 +81,32 @@ namespace LedgerWallet.U2F
 		public override string ToString()
 		{
 			return Encoders.Hex.EncodeData(_Bytes);
+		}
+	}
+
+	public class U2FAuthenticationResponse
+	{
+		public U2FAuthenticationResponse(byte[] bytes)
+		{
+			UserPresence = bytes[0] != 0;
+			Counter = Utils.ToUInt32(bytes, 1, false);
+			Signature = new byte[bytes.Length - 5];
+			Array.Copy(bytes, 5, Signature, 0, Signature.Length);
+		}
+
+		public bool UserPresence
+		{
+			get; set;
+		}
+
+		public uint Counter
+		{
+			get; set;
+		}
+
+		public byte[] Signature
+		{
+			get; set;
 		}
 	}
 
@@ -155,36 +191,54 @@ namespace LedgerWallet.U2F
 			var data = new byte[64];
 			Array.Copy(challenge, 0, data, 0, 32);
 			Array.Copy(applicationId.GetBytes(true), 0, data, 32, 32);
+			var result = this.ExchangeApdu(INS_ENROLL, 0x03, 0x00, data, cancellationToken);
+			return new U2FRegistrationResponse(result);
+		}
+
+		public U2FAuthenticationResponse Authenticate(byte[] challenge, AppId applicationId, KeyHandle keyHandle, CancellationToken cancellationToken = default(CancellationToken))
+		{
+			if(challenge == null)
+				throw new ArgumentNullException("challenge");
+			if(challenge.Length != 32)
+				throw new ArgumentException("Challenge should be 32 bytes");
+			if(applicationId == null)
+				throw new ArgumentNullException("applicationId");
+
+			var data = new byte[64 + 1 + keyHandle.Length];
+			Array.Copy(challenge, 0, data, 0, 32);
+			Array.Copy(applicationId.GetBytes(true), 0, data, 32, 32);
+			data[64] = (byte)keyHandle.Length;
+			Array.Copy(keyHandle.GetBytes(true), 0, data, 65, keyHandle.Length);
+			var result = this.ExchangeApdu(INS_SIGN, 0x03, 0x00, data, cancellationToken);
+			return new U2FAuthenticationResponse(result);
+		}
+
+		private byte[] ExchangeApdu(byte ins, byte p1, byte p2, byte[] data, CancellationToken cancellationToken)
+		{
 			while(true)
 			{
 				cancellationToken.ThrowIfCancellationRequested();
 				try
 				{
-
-					var result = this.ExchangeApdu(INS_ENROLL, 0x03, 0x00, data);
-					return new U2FRegistrationResponse(result);
-				}catch(LedgerWalletException ex)
+					MemoryStream apduStream = new MemoryStream();
+					apduStream.WriteByte(0);
+					apduStream.WriteByte(ins);
+					apduStream.WriteByte(p1);
+					apduStream.WriteByte(p2);
+					apduStream.WriteByte((byte)(data.Length >> 16));
+					apduStream.WriteByte((byte)(data.Length >> 8));
+					apduStream.WriteByte((byte)(data.Length & 0xff));
+					apduStream.Write(data, 0, data.Length);
+					apduStream.WriteByte(0x04);
+					apduStream.WriteByte(0);
+					return ExchangeApdu(apduStream.ToArray(), OK);
+				}
+				catch(LedgerWalletException ex)
 				{
 					if(ex.Status.KnownSW != WellKnownSW.ConditionsOfUseNotSatisfied)
 						throw;
 				}
 			}
-		}
-
-		private byte[] ExchangeApdu(byte ins, byte p1, byte p2, byte[] data)
-		{
-			MemoryStream apduStream = new MemoryStream();
-			apduStream.WriteByte(0);
-			apduStream.WriteByte(ins);
-			apduStream.WriteByte(p1);
-			apduStream.WriteByte(p2);
-			apduStream.WriteByte((byte)(data.Length >> 16));
-			apduStream.WriteByte((byte)(data.Length >> 8));
-			apduStream.WriteByte((byte)(data.Length & 0xff));
-			apduStream.Write(data, 0, data.Length);
-			apduStream.WriteByte(0x04);
-			apduStream.WriteByte(0);
-			return ExchangeApdu(apduStream.ToArray(), OK);
 		}
 
 		protected byte[] ExchangeApduNoDataLength(byte cla, byte ins, byte p1, byte p2, byte[] data, out int sw)

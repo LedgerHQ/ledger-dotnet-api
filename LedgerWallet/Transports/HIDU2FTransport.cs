@@ -98,6 +98,7 @@ namespace LedgerWallet.Transports
 
 		protected HIDU2FTransport(HidDevice device) : base(device)
 		{
+			ReadTimeout = TimeSpan.FromSeconds(0.5);
 		}
 
 		static readonly HIDDeviceTransportRegistry<HIDU2FTransport> _Registry;
