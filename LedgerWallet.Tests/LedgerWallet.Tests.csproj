@@ -61,6 +61,7 @@
     <Compile Include="NanoSTests.cs" />
     <Compile Include="LegacyLedgerTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="U2FTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\LedgerWallet\LedgerWallet.csproj">

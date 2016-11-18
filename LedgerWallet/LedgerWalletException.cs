@@ -6,6 +6,17 @@ using System.Threading.Tasks;
 
 namespace LedgerWallet
 {
+	public enum WellKnownSW : int
+	{
+		IncorrectLength = 0x6700,
+		SecurityStatusNotSatisfied = 0x6982,
+		ConditionsOfUseNotSatisfied = 0x6985,
+		InvalidData = 0x6A80,
+		FileNotFound = 0x6482,
+		IncorrectParameter = 0x6B00,
+		OK = 0x9000,
+		UnsupportedCommand = 0x6D00
+	}
 	public class LedgerWalletException : Exception
 	{
 		public LedgerWalletException(string message) : base(message)
@@ -42,6 +53,14 @@ namespace LedgerWallet
 			get
 			{
 				return _SW;
+			}
+		}
+
+		public WellKnownSW KnownSW
+		{
+			get
+			{
+				return (WellKnownSW)SW;
 			}
 		}
 
