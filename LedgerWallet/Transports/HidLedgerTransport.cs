@@ -75,6 +75,23 @@ namespace LedgerWallet.Transports
 			new VendorProductIds(0x2581, 0x3b7c)
 		};
 
+		public static VendorProductIds[] WellKnownU2F = new VendorProductIds[]
+		{
+				new VendorProductIds(0x1050, 0x0200),  // Gnubby
+				new VendorProductIds(0x1050, 0x0113),  // YubiKey NEO U2F
+				new VendorProductIds(0x1050, 0x0114),  // YubiKey NEO OTP+U2F
+				new VendorProductIds(0x1050, 0x0115),  // YubiKey NEO U2F+CCID
+				new VendorProductIds(0x1050, 0x0116),  // YubiKey NEO OTP+U2F+CCID
+				new VendorProductIds(0x1050, 0x0120),  // Security Key by Yubico
+				new VendorProductIds(0x1050, 0x0410),  // YubiKey Plus
+				new VendorProductIds(0x1050, 0x0402),  // YubiKey 4 U2F
+				new VendorProductIds(0x1050, 0x0403),  // YubiKey 4 OTP+U2F
+				new VendorProductIds(0x1050, 0x0406),  // YubiKey 4 U2F+CCID
+				new VendorProductIds(0x1050, 0x0407),  // YubiKey 4 OTP+U2F+CCID
+				new VendorProductIds(0x2581, 0xf1d0),  // Plug-Up U2F Security Key
+				new VendorProductIds(0x2c97, 0x0001),  // Nano S
+		};
+
 		public static unsafe IEnumerable<HIDLedgerTransport> GetHIDTransports(IEnumerable<VendorProductIds> ids = null)
 		{
 			ids = ids ?? WellKnownLedgerWallets;
@@ -106,69 +123,33 @@ namespace LedgerWallet.Transports
 			_DevicePath = device.DevicePath;
 			_VendorProductIds = new VendorProductIds(device.Attributes.VendorId, device.Attributes.ProductId);
 		}
-		
+
 		internal byte[] ExchangeCore(byte[] apdu)
 		{
-			MemoryStream output = new MemoryStream();
-			byte[] buffer = new byte[400];
-			byte[] paddingBuffer = new byte[MAX_BLOCK];
-			int result;
-			int length;
-			int swOffset;
-			uint remaining = (uint)apdu.Length;
-			uint offset = 0;
-
-			result = WrapCommandAPDU(DEFAULT_LEDGER_CHANNEL, apdu, LEDGER_HID_PACKET_SIZE, buffer);
-			if(result < 0)
-			{
+			int sequenceIdx = 0;
+			if(apdu == null)
 				return null;
-			}
-			remaining = (uint)result;
-
-			while(remaining > 0)
+			byte[] packet = null;
+			var apduStream = new MemoryStream(apdu);
+			do
 			{
-				uint blockSize = (remaining > MAX_BLOCK ? MAX_BLOCK : remaining);
-				memset(paddingBuffer, 0, MAX_BLOCK);
-				memcpy(paddingBuffer, 0U, buffer, offset, blockSize);
+				packet = WrapCommandAPDU(DEFAULT_LEDGER_CHANNEL, apduStream, ref sequenceIdx);
+				hid_write(_Device.Handle, packet, packet.Length);
+			} while(apduStream.Position != apduStream.Length);
 
-				result = hid_write(_Device.Handle, paddingBuffer, (int)blockSize);
+			MemoryStream response = new MemoryStream();
+			int remaining = 0;
+			sequenceIdx = 0;
+			do
+			{
+				var result = hid_read_timeout(_Device.Handle, packet, MAX_BLOCK, TIMEOUT);
 				if(result < 0)
-				{
 					return null;
-				}
-				offset += blockSize;
-				remaining -= blockSize;
-			}
+				var commandPart = UnwrapReponseAPDU(DEFAULT_LEDGER_CHANNEL, packet, ref sequenceIdx, ref remaining);
+				response.Write(commandPart, 0, commandPart.Length);
+			} while(remaining != 0);
 
-			buffer = new byte[400];
-			result = hid_read_timeout(_Device.Handle, buffer, MAX_BLOCK, TIMEOUT);
-			if(result < 0)
-			{
-				return null;
-			}
-			offset = MAX_BLOCK;
-			for(;;)
-			{
-				output = new MemoryStream();
-				result = UnwrapReponseAPDU(DEFAULT_LEDGER_CHANNEL, buffer, offset, LEDGER_HID_PACKET_SIZE, output);
-				if(result < 0)
-				{
-					return null;
-				}
-				if(result != 0)
-				{
-					length = result - 2;
-					swOffset = result - 2;
-					break;
-				}
-				result = hid_read_timeout(_Device.Handle, buffer, offset, MAX_BLOCK, TIMEOUT);
-				if(result < 0)
-				{
-					return null;
-				}
-				offset += MAX_BLOCK;
-			}
-			return output.ToArray();
+			return response.ToArray();
 		}
 
 		private int hid_read_timeout(IntPtr intPtr, byte[] buffer, uint offset, uint length, int milliseconds)
@@ -205,15 +186,6 @@ namespace LedgerWallet.Transports
 			return length;
 		}
 
-
-		private void memset(byte[] array, byte value, uint count)
-		{
-			for(int i = 0; i < count; i++)
-				array[i] = value;
-		}
-
-
-
 		const uint MAX_BLOCK = 64;
 		const int VID = 0x2581;
 		const int PID = 0x2b7c;
@@ -226,74 +198,64 @@ namespace LedgerWallet.Transports
 		const int TIMEOUT = 20000;
 
 
-		int WrapCommandAPDU(uint channel, byte[] command, uint packetSize, byte[] output)
+		byte[] WrapCommandAPDU(uint channel, Stream command, ref int sequenceIdx)
 		{
-			uint commandLength = (uint)command.Length;
-			uint outputLength = (uint)output.Length;
-			int sequenceIdx = 0;
-			uint offset = 0;
-			uint offsetOut = 0;
-			uint blockSize;
-			if(packetSize < 3)
+			MemoryStream output = new MemoryStream();
+			int position = (int)output.Position;
+			output.WriteByte((byte)((channel >> 8) & 0xff));
+			output.WriteByte((byte)(channel & 0xff));
+			output.WriteByte((byte)TAG_APDU);
+			output.WriteByte((byte)((sequenceIdx >> 8) & 0xff));
+			output.WriteByte((byte)(sequenceIdx & 0xff));
+			if(sequenceIdx == 0)
 			{
-				return -1;
+				output.WriteByte((byte)((command.Length >> 8) & 0xff));
+				output.WriteByte((byte)(command.Length & 0xff));
 			}
-			if(outputLength < 7)
-			{
-				return -1;
-			}
-			outputLength -= 7;
-			output[offsetOut++] = (byte)((channel >> 8) & 0xff);
-			output[offsetOut++] = (byte)(channel & 0xff);
-			output[offsetOut++] = (byte)TAG_APDU;
-			output[offsetOut++] = (byte)((sequenceIdx >> 8) & 0xff);
-			output[offsetOut++] = (byte)(sequenceIdx & 0xff);
 			sequenceIdx++;
-			output[offsetOut++] = (byte)((commandLength >> 8) & 0xff);
-			output[offsetOut++] = (byte)(commandLength & 0xff);
-			blockSize = (commandLength > packetSize - 7 ? packetSize - 7 : commandLength);
-			if(outputLength < blockSize)
-			{
-				return -1;
-			}
-			outputLength -= blockSize;
-			memcpy(output, offsetOut, command, offset, blockSize);
-			offsetOut += blockSize;
-			offset += blockSize;
-			while(offset != commandLength)
-			{
-				if(outputLength < 5)
-				{
-					return -1;
-				}
-				outputLength -= 5;
-				output[offsetOut++] = (byte)((channel >> 8) & 0xff);
-				output[offsetOut++] = (byte)(channel & 0xff);
-				output[offsetOut++] = (byte)TAG_APDU;
-				output[offsetOut++] = (byte)((sequenceIdx >> 8) & 0xff);
-				output[offsetOut++] = (byte)(sequenceIdx & 0xff);
-				sequenceIdx++;
-				blockSize = ((commandLength - offset) > packetSize - 5 ? packetSize - 5 : commandLength - offset);
-				if(outputLength < blockSize)
-				{
-					return -1;
-				}
-				outputLength -= blockSize;
-				memcpy(output, offsetOut, command, offset, blockSize);
-				offsetOut += blockSize;
-				offset += blockSize;
-			}
-			while((offsetOut % packetSize) != 0)
-			{
-				if(outputLength < 1)
-				{
-					return -1;
-				}
-				outputLength--;
-				output[offsetOut++] = 0;
-			}
-			return (int)offsetOut;
+			var headerSize = (int)(output.Position - position);
+			int blockSize = Math.Min(LEDGER_HID_PACKET_SIZE - headerSize, (int)command.Length - (int)command.Position);
+
+			var commantPart = command.ReadBytes(blockSize);
+			output.Write(commantPart, 0, commantPart.Length);
+			while((output.Length % LEDGER_HID_PACKET_SIZE) != 0)
+				output.WriteByte(0);
+			return output.ToArray();
 		}
+
+		byte[] UnwrapReponseAPDU(uint channel, byte[] data, ref int sequenceIdx, ref int remaining)
+		{
+			MemoryStream output = new MemoryStream();
+			MemoryStream input = new MemoryStream(data);
+			int position = (int)input.Position;
+			if(input.ReadByte() != ((channel >> 8) & 0xff))
+				return null;
+			if(input.ReadByte() != (channel & 0xff))
+				return null;
+			if(input.ReadByte() != TAG_APDU)
+				return null;
+			if(input.ReadByte() != ((sequenceIdx >> 8) & 0xff))
+				return null;
+			if(input.ReadByte() != (sequenceIdx & 0xff))
+				return null;
+
+			if(sequenceIdx == 0)
+			{
+				remaining = ((input.ReadByte()) << 8);
+				remaining |= input.ReadByte();
+			}
+			sequenceIdx++;
+			var headerSize = input.Position - position;
+			var blockSize = (int)Math.Min(remaining, LEDGER_HID_PACKET_SIZE - headerSize);
+
+			byte[] commandPart = new byte[blockSize];
+			if(input.Read(commandPart, 0, commandPart.Length) != commandPart.Length)
+				return null;
+			output.Write(commandPart, 0, commandPart.Length);
+			remaining -= blockSize;
+			return output.ToArray();
+		}
+
 
 		private void memcpy(byte[] dest, uint destOffset, byte[] src, uint srcOffset, uint length)
 		{
@@ -303,87 +265,6 @@ namespace LedgerWallet.Transports
 		private void memcpy(Stream dest, byte[] src, uint srcOffset, uint length)
 		{
 			dest.Write(src, (int)srcOffset, (int)length);
-		}
-
-		int UnwrapReponseAPDU(uint channel, byte[] data, uint dataLength, uint packetSize, Stream output)
-		{
-			int sequenceIdx = 0;
-			uint offset = 0;
-			uint offsetOut = 0;
-			uint responseLength;
-			uint blockSize;
-			if((data == null) || (dataLength < 7 + 5))
-			{
-				return 0;
-			}
-			if(data[offset++] != ((channel >> 8) & 0xff))
-			{
-				return -1;
-			}
-			if(data[offset++] != (channel & 0xff))
-			{
-				return -1;
-			}
-			if(data[offset++] != TAG_APDU)
-			{
-				return -1;
-			}
-			if(data[offset++] != ((sequenceIdx >> 8) & 0xff))
-			{
-				return -1;
-			}
-			if(data[offset++] != (sequenceIdx & 0xff))
-			{
-				return -1;
-			}
-			responseLength = (((uint)data[offset++]) << 8);
-			responseLength |= data[offset++];
-
-			if(dataLength < 7 + responseLength)
-			{
-				return 0;
-			}
-			blockSize = (responseLength > packetSize - 7 ? packetSize - 7 : responseLength);
-			memcpy(output, data, offset, blockSize);
-			offset += blockSize;
-			offsetOut += blockSize;
-			while(offsetOut != responseLength)
-			{
-				sequenceIdx++;
-				if(offset == dataLength)
-				{
-					return 0;
-				}
-				if(data[offset++] != ((channel >> 8) & 0xff))
-				{
-					return -1;
-				}
-				if(data[offset++] != (channel & 0xff))
-				{
-					return -1;
-				}
-				if(data[offset++] != TAG_APDU)
-				{
-					return -1;
-				}
-				if(data[offset++] != ((sequenceIdx >> 8) & 0xff))
-				{
-					return -1;
-				}
-				if(data[offset++] != (sequenceIdx & 0xff))
-				{
-					return -1;
-				}
-				blockSize = ((responseLength - offsetOut) > packetSize - 5 ? packetSize - 5 : responseLength - offsetOut);
-				if(blockSize > dataLength - offset)
-				{
-					return 0;
-				}
-				memcpy(output, data, offset, blockSize);
-				offset += blockSize;
-				offsetOut += blockSize;
-			}
-			return (int)offsetOut;
 		}
 
 		private static unsafe IEnumerable<HidDevice> EnumerateHIDDevices(IEnumerable<VendorProductIds> vendorProductIds)

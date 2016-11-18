@@ -20,8 +20,6 @@ namespace LedgerWallet
 		public LedgerClient(ILedgerTransport transport) : base(transport)
 		{
 		}
-		//https://github.com/LedgerHQ/ledger-wallet-chrome/blob/59f52dcedc031871d17cc69eb531bc6b4cf89a6b/app/libs/btchip/btchip-js-api/chromeApp/chromeDevice.js
-		//https://github.com/LedgerHQ/ledger-wallet-chrome/blob/59f52dcedc031871d17cc69eb531bc6b4cf89a6b/app/src/dongle/manager.coffee
 		public static IEnumerable<LedgerClient> GetHIDLedgers()
 		{
 			var ledgers = HIDLedgerTransport.GetHIDTransports()
