@@ -14,9 +14,9 @@ namespace LedgerWallet.Transports
 		{
 			this.create = create;
 		}
-		public unsafe IEnumerable<T> GetHIDTransports(IEnumerable<VendorProductIds> ids)
+		public unsafe IEnumerable<T> GetHIDTransports(IEnumerable<VendorProductIds> ids, params UsageSpecification[] acceptedUsages)
 		{
-			return HIDTransportBase.EnumerateHIDDevices(ids)
+			return HIDTransportBase.EnumerateHIDDevices(ids, acceptedUsages)
 							.Select(d => GetTransport(d))
 							.ToList();
 		}

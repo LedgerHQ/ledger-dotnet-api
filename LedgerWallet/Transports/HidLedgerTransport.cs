@@ -43,7 +43,7 @@ namespace LedgerWallet.Transports
 			new VendorProductIds(0x2581, 0x3b7c)
 		};
 
-		protected HIDLedgerTransport(HidDevice device) : base(device)
+		protected HIDLedgerTransport(HidDevice device) : base(device, null)
 		{
 		}
 

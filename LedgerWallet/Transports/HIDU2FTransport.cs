@@ -96,7 +96,7 @@ namespace LedgerWallet.Transports
 				new VendorProductIds(0x2c97, 0x0001),  // Nano S
 		};
 
-		protected HIDU2FTransport(HidDevice device) : base(device)
+		protected HIDU2FTransport(HidDevice device) : base(device, _UsageSpecification)
 		{
 			ReadTimeout = TimeSpan.FromSeconds(0.5);
 		}
@@ -132,10 +132,11 @@ namespace LedgerWallet.Transports
 			}
 		}
 
+		static UsageSpecification[] _UsageSpecification = new[] { new UsageSpecification(0xf1d0, 0x01) };
 		public static unsafe IEnumerable<HIDU2FTransport> GetHIDTransports(IEnumerable<VendorProductIds> ids = null)
 		{
 			ids = ids ?? WellKnownU2F;
-			return _Registry.GetHIDTransports(ids);
+			return _Registry.GetHIDTransports(ids, _UsageSpecification);
 		}
 
 		protected override byte[] WrapCommandAPDU(Stream command, ref int sequenceIdx)

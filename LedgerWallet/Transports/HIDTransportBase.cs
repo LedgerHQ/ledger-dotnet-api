@@ -10,6 +10,25 @@ using System.Threading.Tasks;
 
 namespace LedgerWallet.Transports
 {
+	public class UsageSpecification
+	{
+		public UsageSpecification(ushort usagePage, ushort usage)
+		{
+			UsagePage = usagePage;
+			Usage = usage;
+		}
+
+		public ushort Usage
+		{
+			get;
+			private set;
+		}
+		public ushort UsagePage
+		{
+			get;
+			private set;
+		}
+	}
 	public abstract class HIDTransportBase : ILedgerTransport
 	{
 		internal HidDevice _Device;
@@ -37,15 +56,18 @@ namespace LedgerWallet.Transports
 			}
 		}
 
-		protected HIDTransportBase(HidDevice device)
+		protected HIDTransportBase(HidDevice device, UsageSpecification[] acceptedUsageSpecifications)
 		{
 			if(!device.IsOpen)
 				device.OpenDevice();
 			_Device = device;
 			_DevicePath = device.DevicePath;
 			_VendorProductIds = new VendorProductIds(device.Attributes.VendorId, device.Attributes.ProductId);
+			_AcceptedUsageSpecifications = acceptedUsageSpecifications;
 			ReadTimeout = TimeSpan.FromMilliseconds(DEFAULT_TIMEOUT);
 		}
+
+		UsageSpecification[] _AcceptedUsageSpecifications;
 
 		bool needInit = true;
 		public string DevicePath
@@ -91,7 +113,7 @@ namespace LedgerWallet.Transports
 			var newDevice = EnumerateHIDDevices(new[]
 			{
 				this._VendorProductIds
-			})
+			}, _AcceptedUsageSpecifications)
 			.FirstOrDefault(hid => hid.DevicePath == _DevicePath);
 			if(newDevice == null)
 				return false;
@@ -106,7 +128,7 @@ namespace LedgerWallet.Transports
 		{
 		}
 
-		internal static unsafe IEnumerable<HidDevice> EnumerateHIDDevices(IEnumerable<VendorProductIds> vendorProductIds)
+		internal static unsafe IEnumerable<HidDevice> EnumerateHIDDevices(IEnumerable<VendorProductIds> vendorProductIds, params UsageSpecification[] acceptedUsages)
 		{
 			List<HidDevice> devices = new List<HidDevice>();
 			foreach(var ids in vendorProductIds)
@@ -117,7 +139,8 @@ namespace LedgerWallet.Transports
 					devices.AddRange(HidDevices.Enumerate(ids.VendorId, ids.ProductId.Value));
 
 			}
-			return devices;
+			return devices
+				.Where(d=> acceptedUsages?.Length == 0 || acceptedUsages.Any(u => (ushort)d.Capabilities.UsagePage == u.UsagePage && (ushort)d.Capabilities.Usage == u.Usage));
 		}
 
 
