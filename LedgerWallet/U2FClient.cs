@@ -88,13 +88,21 @@ namespace LedgerWallet.U2F
 	{
 		public U2FAuthenticationResponse(byte[] bytes)
 		{
-			UserPresence = bytes[0] != 0;
+			UserPresenceByte = bytes[0];
 			Counter = Utils.ToUInt32(bytes, 1, false);
 			Signature = new byte[bytes.Length - 5];
 			Array.Copy(bytes, 5, Signature, 0, Signature.Length);
 		}
 
 		public bool UserPresence
+		{
+			get
+			{
+				return UserPresenceByte != 1;
+			}
+		}
+
+		public byte UserPresenceByte
 		{
 			get; set;
 		}
@@ -107,6 +115,15 @@ namespace LedgerWallet.U2F
 		public byte[] Signature
 		{
 			get; set;
+		}
+
+		public byte[] ToBytes()
+		{
+			MemoryStream ms = new MemoryStream(1 + 4 + Signature.Length);
+			ms.WriteByte(UserPresenceByte);
+			ms.Write(Utils.ToBytes(Counter, false), 0, 4);
+			ms.Write(Signature, 0, Signature.Length);
+			return ms.ToArrayEfficient();
 		}
 	}
 
