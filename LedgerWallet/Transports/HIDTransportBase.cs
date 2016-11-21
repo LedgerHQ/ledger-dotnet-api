@@ -140,7 +140,10 @@ namespace LedgerWallet.Transports
 
 			}
 			return devices
-				.Where(d=> acceptedUsages?.Length == 0 || acceptedUsages.Any(u => (ushort)d.Capabilities.UsagePage == u.UsagePage && (ushort)d.Capabilities.Usage == u.Usage));
+				.Where(d=> 
+				acceptedUsages == null || 
+				acceptedUsages.Length == 0 || 
+				acceptedUsages.Any(u => (ushort)d.Capabilities.UsagePage == u.UsagePage && (ushort)d.Capabilities.Usage == u.Usage));
 		}
 
 
