@@ -86,6 +86,10 @@ namespace LedgerWallet.U2F
 
 	public class U2FAuthenticationResponse
 	{
+		public U2FAuthenticationResponse()
+		{
+
+		}
 		public U2FAuthenticationResponse(byte[] bytes)
 		{
 			UserPresenceByte = bytes[0];
