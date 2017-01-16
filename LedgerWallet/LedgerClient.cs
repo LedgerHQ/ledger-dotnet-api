@@ -183,14 +183,12 @@ namespace LedgerWallet
 			using(Transport.Lock())
 			{
 				var pubkey = GetWalletPubKey(keyPath).UncompressedPublicKey.Compress();
-				var parentsById = parents.ToDictionary(p => p.GetHash());
 				var coinsByPrevout = signedCoins.ToDictionary(c => c.Outpoint);
 
 				List<TrustedInput> trustedInputs = new List<TrustedInput>();
 				foreach(var input in transaction.Inputs)
 				{
-					Transaction parent;
-					parentsById.TryGetValue(input.PrevOut.Hash, out parent);
+					Transaction parent = parents.FirstOrDefault(tx => tx.GetHash() == input.PrevOut.Hash);
 					if(parent == null)
 						throw new KeyNotFoundException("Parent transaction " + input.PrevOut.Hash + " not found");
 					trustedInputs.Add(GetTrustedInput(parent, (int)input.PrevOut.N));
