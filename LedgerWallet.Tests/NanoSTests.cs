@@ -69,7 +69,9 @@ namespace LedgerWallet.Tests
             var walletPubKey = ledger.GetWalletPubKey(new KeyPath("1'/0"));
             var address = (BitcoinAddress)walletPubKey.Address;
 
-            Transaction funding = new Transaction();
+			var changeAddress = (BitcoinAddress)ledger.GetWalletPubKey(new KeyPath("1'/1")).Address;
+
+			Transaction funding = new Transaction();
             funding.AddInput(Network.Main.GetGenesis().Transactions[0].Inputs[0]);
             funding.Outputs.Add(new TxOut(Money.Coins(1.1m), address));
             funding.Outputs.Add(new TxOut(Money.Coins(1.0m), address));
@@ -81,9 +83,10 @@ namespace LedgerWallet.Tests
             spending.LockTime = 1;
             spending.Inputs.AddRange(coins.Select(o => new TxIn(o.Outpoint, o.ScriptPubKey)));
             spending.Outputs.Add(new TxOut(Money.Coins(0.5m), BitcoinAddress.Create("15sYbVpRh6dyWycZMwPdxJWD4xbfxReeHe")));
-            spending.Outputs.Add(new TxOut(Money.Coins(0.8m), address));
+            spending.Outputs.Add(new TxOut(Money.Coins(0.8m), changeAddress));
             spending.Outputs.Add(new TxOut(Money.Zero, TxNullDataTemplate.Instance.GenerateScriptPubKey(new byte[] { 1, 2 })));
 
+			//should show 0.5 and 2.0 btc in fee
             var signed = ledger.SignTransaction(
               new KeyPath("1'/0"),
               new Coin[]
@@ -94,7 +97,7 @@ namespace LedgerWallet.Tests
             }, new Transaction[]
             {
                 funding
-            }, spending);
+            }, spending, new KeyPath("1'/1"));
         }
 
         private static LedgerClient GetLedger()

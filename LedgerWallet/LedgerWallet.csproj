@@ -58,6 +58,7 @@
     <Compile Include="LedgerClientBase.cs" />
     <Compile Include="LedgerWalletConstants.cs" />
     <Compile Include="LedgerWalletException.cs" />
+    <Compile Include="SignatureRequest.cs" />
     <Compile Include="Transports\HIDDeviceTransportRegistry.cs" />
     <Compile Include="Transports\DisposableLock.cs" />
     <Compile Include="Transports\HIDTransportBase.cs" />

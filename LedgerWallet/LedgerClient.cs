@@ -142,10 +142,15 @@ namespace LedgerWallet
 			}
 		}
 
-		public byte[] UntrustedHashTransactionInputFinalizeFull(IEnumerable<TxOut> outputs)
+		public byte[] UntrustedHashTransactionInputFinalizeFull(KeyPath change, IEnumerable<TxOut> outputs)
 		{
 			using(Transport.Lock())
 			{
+				if(change != null)
+				{
+					ExchangeApdu(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_HASH_INPUT_FINALIZE_FULL, 0xFF, 0x00, Serializer.Serialize(change), OK);
+				}
+
 				byte[] result = null;
 				int offset = 0;
 				byte[] response = null;
@@ -177,21 +182,34 @@ namespace LedgerWallet
 			}
 		}
 
+		public Transaction SignTransaction(KeyPath keyPath, ICoin[] signedCoins, Transaction[] parents, Transaction transaction, KeyPath changePath = null)
+		{
+			List<SignatureRequest> requests = new List<SignatureRequest>();
+			foreach(var c in signedCoins)
+			{
+				var tx = parents.FirstOrDefault(t => t.GetHash() == c.Outpoint.Hash);
+				if(tx != null)
+					requests.Add(new SignatureRequest()
+					{
+						InputCoin = c,
+						InputTransaction = tx,
+						KeyPath = keyPath
+					});
+			}
+			return SignTransaction(requests.ToArray(), transaction, changePath : changePath);
+		}
 
-		public Transaction SignTransaction(KeyPath keyPath, ICoin[] signedCoins, Transaction[] parents, Transaction transaction)
+		public Transaction SignTransaction(SignatureRequest[] signatureRequests, Transaction transaction, KeyPath changePath = null, bool verify = true)
 		{
 			using(Transport.Lock())
 			{
-				var pubkey = GetWalletPubKey(keyPath).UncompressedPublicKey.Compress();
-				var coinsByPrevout = signedCoins.ToDictionary(c => c.Outpoint);
-
 				List<TrustedInput> trustedInputs = new List<TrustedInput>();
 				foreach(var input in transaction.Inputs)
 				{
-					Transaction parent = parents.FirstOrDefault(tx => tx.GetHash() == input.PrevOut.Hash);
+					var parent = signatureRequests.FirstOrDefault(tx => tx.InputCoin.Outpoint.Hash == input.PrevOut.Hash);
 					if(parent == null)
 						throw new KeyNotFoundException("Parent transaction " + input.PrevOut.Hash + " not found");
-					trustedInputs.Add(GetTrustedInput(parent, (int)input.PrevOut.N));
+					trustedInputs.Add(GetTrustedInput(parent.InputTransaction, (int)input.PrevOut.N));
 				}
 
 				var inputs = trustedInputs.ToArray();
@@ -200,30 +218,33 @@ namespace LedgerWallet
 
 				foreach(var input in transaction.Inputs)
 				{
-					ICoin previousCoin = null;
-					coinsByPrevout.TryGetValue(input.PrevOut, out previousCoin);
+					var previousReq = signatureRequests.FirstOrDefault(req => req.InputCoin.Outpoint.Hash == input.PrevOut.Hash);
 
-					if(previousCoin != null)
-						input.ScriptSig = previousCoin.GetScriptCode();
+					if(previousReq != null)
+						input.ScriptSig = previousReq.InputCoin.GetScriptCode();
 				}
 
 				bool newTransaction = true;
 				foreach(var input in transaction.Inputs.AsIndexedInputs())
 				{
-					ICoin coin = null;
-					if(!coinsByPrevout.TryGetValue(input.PrevOut, out coin))
+					var previousReq = signatureRequests.FirstOrDefault(req => req.InputCoin.Outpoint.Hash == input.PrevOut.Hash);
+					if(previousReq == null)
 						continue;
 
 					UntrustedHashTransactionInputStart(newTransaction, input, inputs);
 					newTransaction = false;
 
-					UntrustedHashTransactionInputFinalizeFull(transaction.Outputs);
+					UntrustedHashTransactionInputFinalizeFull(changePath, transaction.Outputs);
 
-					var sig = UntrustedHashSign(keyPath, null, transaction.LockTime, SigHash.All);
-					input.ScriptSig = PayToPubkeyHashTemplate.Instance.GenerateScriptSig(sig, pubkey);
-					ScriptError error;
-					if(!Script.VerifyScript(coin.TxOut.ScriptPubKey, transaction, (int)input.Index, Money.Zero, out error))
-						return null;
+					var sig = UntrustedHashSign(previousReq.KeyPath, null, transaction.LockTime, SigHash.All);
+					if(verify)
+					{
+						var pubkey = GetWalletPubKey(previousReq.KeyPath).UncompressedPublicKey.Compress();
+						input.ScriptSig = PayToPubkeyHashTemplate.Instance.GenerateScriptSig(sig, pubkey);
+						ScriptError error;
+						if(!Script.VerifyScript(previousReq.InputCoin.TxOut.ScriptPubKey, transaction, (int)input.Index, Money.Zero, out error))
+							return null;
+					}
 				}
 
 				return transaction;
