@@ -98,6 +98,10 @@ namespace LedgerWallet
 		{
 			switch(status.SW)
 			{
+				case 0x6D00:
+					return "INS not supported";
+				case 0x6E00:
+					return "CLA not supported";
 				case 0x6700:
 					return "Incorrect length";
 				case 0x6982:
