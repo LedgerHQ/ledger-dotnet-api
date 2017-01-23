@@ -196,7 +196,7 @@ namespace LedgerWallet
 						KeyPath = keyPath
 					});
 			}
-			return SignTransaction(requests.ToArray(), transaction, changePath : changePath);
+			return SignTransaction(requests.ToArray(), transaction, changePath: changePath);
 		}
 
 		public Transaction SignTransaction(SignatureRequest[] signatureRequests, Transaction transaction, KeyPath changePath = null, bool verify = true)
@@ -237,10 +237,11 @@ namespace LedgerWallet
 					UntrustedHashTransactionInputFinalizeFull(changePath, transaction.Outputs);
 
 					var sig = UntrustedHashSign(previousReq.KeyPath, null, transaction.LockTime, SigHash.All);
+
+					var pubkey = GetWalletPubKey(previousReq.KeyPath).UncompressedPublicKey.Compress();
+					input.ScriptSig = PayToPubkeyHashTemplate.Instance.GenerateScriptSig(sig, pubkey);
 					if(verify)
 					{
-						var pubkey = GetWalletPubKey(previousReq.KeyPath).UncompressedPublicKey.Compress();
-						input.ScriptSig = PayToPubkeyHashTemplate.Instance.GenerateScriptSig(sig, pubkey);
 						ScriptError error;
 						if(!Script.VerifyScript(previousReq.InputCoin.TxOut.ScriptPubKey, transaction, (int)input.Index, Money.Zero, out error))
 							return null;
