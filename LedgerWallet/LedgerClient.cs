@@ -243,7 +243,7 @@ namespace LedgerWallet
 					if(verify)
 					{
 						ScriptError error;
-						if(!Script.VerifyScript(previousReq.InputCoin.TxOut.ScriptPubKey, transaction, (int)input.Index, Money.Zero, out error))
+						if(!Script.VerifyScript(previousReq.InputCoin.TxOut.ScriptPubKey, transaction, (int)input.Index, previousReq.InputCoin.TxOut.Value, out error))
 							return null;
 					}
 				}
