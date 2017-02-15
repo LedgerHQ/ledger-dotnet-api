@@ -239,7 +239,13 @@ namespace LedgerWallet
 					var sig = UntrustedHashSign(previousReq.KeyPath, null, transaction.LockTime, SigHash.All);
 
 					var pubkey = GetWalletPubKey(previousReq.KeyPath).UncompressedPublicKey.Compress();
-					input.ScriptSig = PayToPubkeyHashTemplate.Instance.GenerateScriptSig(sig, pubkey);
+					input.ScriptSig =
+						pubkey.ScriptPubKey == previousReq.InputCoin.TxOut.ScriptPubKey ?
+							PayToPubkeyTemplate.Instance.GenerateScriptSig(sig) :
+						pubkey.Hash.ScriptPubKey == previousReq.InputCoin.TxOut.ScriptPubKey ?
+						PayToPubkeyHashTemplate.Instance.GenerateScriptSig(sig, pubkey) : null;
+					if(input.ScriptSig == null)
+						throw new InvalidOperationException("Impossible to generate the scriptSig of this transaction");
 					if(verify)
 					{
 						ScriptError error;
