@@ -51,7 +51,8 @@ namespace LedgerWallet.Transports
 				moduleHandle = LoadLibraryEx(Directory.GetCurrentDirectory() + "\\" + folder + "\\hidapi.dll", IntPtr.Zero, 0);
 				if(moduleHandle == IntPtr.Zero)
 				{
-					throw new Win32Exception();
+					fi = new FileInfo(myass.CodeBase.Replace("file:///", ""));
+					moduleHandle = LoadLibraryEx(fi.Directory.FullName + "\\" + folder + "\\hidapi.dll", IntPtr.Zero, 0);
 				}
 			}
 		}
