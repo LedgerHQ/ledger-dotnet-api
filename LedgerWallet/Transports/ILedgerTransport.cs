@@ -10,5 +10,6 @@ namespace LedgerWallet.Transports
 	{
 		IDisposable Lock();
 		byte[] Exchange(byte[] apdu);
+		void ExchangeAsync(byte[] apdu);
 	}
 }

@@ -239,5 +239,9 @@ namespace LedgerWallet.Transports
 			return length;
 		}
 
+		public void ExchangeAsync(byte[] apdu)
+		{
+			Exchange(apdu);
+		}
 	}
 }
