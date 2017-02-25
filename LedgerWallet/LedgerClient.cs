@@ -201,35 +201,31 @@ namespace LedgerWallet
 
 		public Transaction SignTransaction(SignatureRequest[] signatureRequests, Transaction transaction, KeyPath changePath = null, bool verify = true)
 		{
+			List<TrustedInput> trustedInputs = new List<TrustedInput>();
+			Dictionary<uint256, Transaction> knownTransactions = signatureRequests
+				.Select(o => o.InputTransaction)
+				.ToDictionaryUnique(o => o.GetHash());
+			Dictionary<OutPoint, SignatureRequest> requests = signatureRequests
+				.ToDictionaryUnique(o => o.InputCoin.Outpoint);
+			foreach(var input in transaction.Inputs)
+			{
+				Transaction parent;
+				if(!knownTransactions.TryGetValue(input.PrevOut.Hash, out parent))
+					throw new KeyNotFoundException("Parent transaction " + input.PrevOut.Hash + " not found");
+				trustedInputs.Add(GetTrustedInput(parent, (int)input.PrevOut.N));
+			}
 			using(Transport.Lock())
 			{
-				List<TrustedInput> trustedInputs = new List<TrustedInput>();
-				foreach(var input in transaction.Inputs)
-				{
-					var parent = signatureRequests.FirstOrDefault(tx => tx.InputCoin.Outpoint.Hash == input.PrevOut.Hash);
-					if(parent == null)
-						throw new KeyNotFoundException("Parent transaction " + input.PrevOut.Hash + " not found");
-					trustedInputs.Add(GetTrustedInput(parent.InputTransaction, (int)input.PrevOut.N));
-				}
-
 				var inputs = trustedInputs.ToArray();
 
 				transaction = transaction.Clone();
-
-				foreach(var input in transaction.Inputs)
-				{
-					var previousReq = signatureRequests.FirstOrDefault(req => req.InputCoin.Outpoint.Hash == input.PrevOut.Hash);
-
-					if(previousReq != null)
-						input.ScriptSig = previousReq.InputCoin.GetScriptCode();
-				}
-
+				
 				bool newTransaction = true;
 				foreach(var input in transaction.Inputs.AsIndexedInputs())
 				{
-					var previousReq = signatureRequests.FirstOrDefault(req => req.InputCoin.Outpoint.Hash == input.PrevOut.Hash);
-					if(previousReq == null)
-						continue;
+					SignatureRequest previousReq;
+					if(requests.TryGetValue(input.PrevOut, out previousReq))
+						input.ScriptSig = previousReq.InputCoin.GetScriptCode();
 
 					UntrustedHashTransactionInputStart(newTransaction, input, inputs);
 					newTransaction = false;

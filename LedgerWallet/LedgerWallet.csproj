@@ -54,6 +54,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Bip32EncodedKey.cs" />
+    <Compile Include="Extensions.cs" />
     <Compile Include="LedgacyLedgerClient.cs" />
     <Compile Include="LedgerClientBase.cs" />
     <Compile Include="LedgerWalletConstants.cs" />
