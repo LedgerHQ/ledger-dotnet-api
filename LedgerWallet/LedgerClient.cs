@@ -234,7 +234,7 @@ namespace LedgerWallet
 
 					var sig = UntrustedHashSign(previousReq.KeyPath, null, transaction.LockTime, SigHash.All);
 
-					var pubkey = GetWalletPubKey(previousReq.KeyPath).UncompressedPublicKey.Compress();
+					var pubkey = previousReq.PubKey ?? GetWalletPubKey(previousReq.KeyPath).UncompressedPublicKey.Compress();
 					input.ScriptSig =
 						pubkey.ScriptPubKey == previousReq.InputCoin.TxOut.ScriptPubKey ?
 							PayToPubkeyTemplate.Instance.GenerateScriptSig(sig) :

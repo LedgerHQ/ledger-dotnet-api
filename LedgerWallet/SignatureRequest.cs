@@ -21,5 +21,9 @@ namespace LedgerWallet
 		{
 			get; set;
 		}
+		public PubKey PubKey
+		{
+			get; set;
+		}
 	}
 }
