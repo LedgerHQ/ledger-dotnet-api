@@ -86,7 +86,7 @@ namespace LedgerWallet.Transports
 		}
 
 		bool initializing = false;
-		public byte[] Exchange(byte[][] apdus)
+		public async Task<byte[]> Exchange(byte[][] apdus)
 		{
 			if(needInit && !initializing)
 			{
@@ -95,14 +95,14 @@ namespace LedgerWallet.Transports
 				needInit = false;
 				initializing = false;
 			}
-			var response = ExchangeCore(apdus);
+			var response = await ExchangeCore(apdus).ConfigureAwait(false);
 			if(response == null)
 			{
 				if(!RenewTransport())
 				{
 					throw new LedgerWalletException("Ledger disconnected");
 				}
-				response = ExchangeCore(apdus);
+				response = await ExchangeCore(apdus).ConfigureAwait(false);
 				if(response == null)
 					throw new LedgerWalletException("Error while transmission");
 			}
@@ -151,7 +151,7 @@ namespace LedgerWallet.Transports
 		const uint MAX_BLOCK = 64;
 		const int DEFAULT_TIMEOUT = 20000;
 
-		internal byte[] ExchangeCore(byte[][] apdus)
+		internal Task<byte[]> ExchangeCore(byte[][] apdus)
 		{
 			if(apdus == null || apdus.Length == 0)
 				return null;
@@ -164,12 +164,12 @@ namespace LedgerWallet.Transports
 					Write(apdu);
 					result = Read();
 					if(result == null)
-						return null;
+						return Task.FromResult<byte[]>(null);
 					if(!IsOK(result) && lastAPDU != apdu)
-						return result;
+						return Task.FromResult(result);
 				}
 			}
-			return result;
+			return Task.FromResult(result);
 		}
 
 		private bool IsOK(byte[] result)

@@ -7,6 +7,17 @@ using LedgerWallet.Transports;
 
 namespace LedgerWallet
 {
+	public class APDUResponse
+	{
+		public byte[] Response
+		{
+			get; set;
+		}
+		public int SW
+		{
+			get; set;
+		}
+	}
 	public abstract class LedgerClientBase
 	{
 		public static int[] OK = new[] { LedgerWalletConstants.SW_OK };
@@ -136,17 +147,17 @@ namespace LedgerWallet
 		}
 
 
-		protected byte[] ExchangeSingleAPDU(byte cla, byte ins, byte p1, byte p2, byte[] data, int[] acceptedSW)
+		protected Task<byte[]> ExchangeSingleAPDU(byte cla, byte ins, byte p1, byte p2, byte[] data, int[] acceptedSW)
 		{
 			return ExchangeApdus(new byte[][] { CreateAPDU(cla, ins, p1, p2, data) }, acceptedSW);
 		}
 
-		protected byte[] ExchangeSingleAPDU(byte cla, byte ins, byte p1, byte p2, byte[] data, out int lastSW)
+		protected Task<APDUResponse> ExchangeSingleAPDU(byte cla, byte ins, byte p1, byte p2, byte[] data)
 		{
-			return Exchange(new byte[][] { CreateAPDU(cla, ins, p1, p2, data) }, out lastSW);
+			return Exchange(new byte[][] { CreateAPDU(cla, ins, p1, p2, data) });
 		}
 
-		protected byte[] ExchangeSingleAPDU(byte cla, byte ins, byte p1, byte p2, int length, int[] acceptedSW)
+		protected Task<byte[]> ExchangeSingleAPDU(byte cla, byte ins, byte p1, byte p2, int length, int[] acceptedSW)
 		{
 			byte[] apdu = new byte[]
 			{
@@ -155,29 +166,28 @@ namespace LedgerWallet
 			return ExchangeApdus(new byte[][] { apdu }, acceptedSW);
 		}
 
-		protected byte[] ExchangeApdus(byte[][] apdus, int[] acceptedSW)
+		protected async Task<byte[]> ExchangeApdus(byte[][] apdus, int[] acceptedSW)
 		{
-			int sw;
-			var resp = Exchange(apdus, out sw);
-			CheckSW(acceptedSW, sw);
-			return resp;
+			var resp = await Exchange(apdus).ConfigureAwait(false);
+			CheckSW(acceptedSW, resp.SW);
+			return resp.Response;
 		}
 		
 
-		protected byte[] Exchange(byte[][] apdus, out int sw)
+		protected async Task<APDUResponse> Exchange(byte[][] apdus)
 		{
-			byte[] response = Transport.Exchange(apdus);
+			byte[] response = await Transport.Exchange(apdus).ConfigureAwait(false);
 			if(response.Length < 2)
 			{
 				throw new LedgerWalletException("Truncated response");
 			}
-			sw = ((int)(response[response.Length - 2] & 0xff) << 8) |
+			int sw = ((int)(response[response.Length - 2] & 0xff) << 8) |
 					(int)(response[response.Length - 1] & 0xff);
 			if(sw == 0x6faa)
 				Throw(sw);
 			byte[] result = new byte[response.Length - 2];
 			Array.Copy(response, 0, result, 0, response.Length - 2);
-			return result;
+			return new APDUResponse() { Response = response, SW = sw };
 		}
 	}
 }

@@ -8,6 +8,6 @@ namespace LedgerWallet.Transports
 {
 	public interface ILedgerTransport
 	{
-		byte[] Exchange(byte[][] apdus);
+		Task<byte[]> Exchange(byte[][] apdus);
 	}
 }

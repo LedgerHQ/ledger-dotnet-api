@@ -33,19 +33,18 @@ namespace LedgerWallet
 		{
 			int lastSW;
 			remaining = 3;
-			var response = ExchangeSingleAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_VERIFY_PIN, 0, 0, pin.ToBytes(), out lastSW);
-			if(lastSW == LedgerWalletConstants.SW_OK)
+			var response = ExchangeSingleAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_VERIFY_PIN, 0, 0, pin.ToBytes()).GetAwaiter().GetResult();
+			if(response.SW == LedgerWalletConstants.SW_OK)
 				return true;
-			if(lastSW == LedgerWalletConstants.SW_INS_NOT_SUPPORTED)
-				Throw(lastSW);
-			remaining = (lastSW & 0x0F);
+			if(response.SW == LedgerWalletConstants.SW_INS_NOT_SUPPORTED)
+				Throw(response.SW);
+			remaining = (response.SW & 0x0F);
 			return false;
 		}
 		public int GetRemainingAttempts()
 		{
-			int lastSW;
-			var response = ExchangeSingleAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_VERIFY_PIN, 0x80, 0, new byte[] { 1 }, out lastSW);
-			return (lastSW & 0x0F);
+			var response = ExchangeSingleAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_VERIFY_PIN, 0x80, 0, new byte[] { 1 }).GetAwaiter().GetResult();
+			return (response.SW & 0x0F);
 		}
 		public bool VerifyPin(string pin)
 		{
@@ -60,14 +59,22 @@ namespace LedgerWallet
 
 		public OperationMode GetOperationMode()
 		{
-			var response = ExchangeSingleAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_OPERATION_MODE, 0, 0, 0, OK);
+			return GetOperationModeAsync().GetAwaiter().GetResult();
+		}
+		public async Task<OperationMode> GetOperationModeAsync()
+		{
+			var response = await ExchangeSingleAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_OPERATION_MODE, 0, 0, 0, OK).ConfigureAwait(false);
 			return (OperationMode)response[0];
 		}
 
+		public async Task<SecondFactorMode> GetSecondFactorModeAsync()
+		{
+			var response = await ExchangeSingleAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_OPERATION_MODE, 1, 0, 0, OK).ConfigureAwait(false);
+			return (SecondFactorMode)response[0];
+		}
 		public SecondFactorMode GetSecondFactorMode()
 		{
-			var response = ExchangeSingleAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_OPERATION_MODE, 1, 0, 0, OK);
-			return (SecondFactorMode)response[0];
+			return GetSecondFactorModeAsync().GetAwaiter().GetResult();
 		}
 
 		public void SetOperationMode(OperationMode value)
@@ -77,7 +84,11 @@ namespace LedgerWallet
 
 		public SetupResponse RegularSetup(RegularSetup setup)
 		{
-			var response = ExchangeSingleAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_SETUP, 0, 0, setup.ToBytes(), OK);
+			return RegularSetupAsync(setup).GetAwaiter().GetResult();
+		}
+		public async Task<SetupResponse> RegularSetupAsync(RegularSetup setup)
+		{
+			var response = await ExchangeSingleAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_SETUP, 0, 0, setup.ToBytes(), OK).ConfigureAwait(false);
 			return new SetupResponse(response);
 		}
 	}

@@ -28,26 +28,45 @@ namespace LedgerWallet
 			return ledgers;
 		}
 
-		public LedgerWalletFirmware GetFirmwareVersion()
+		public async Task<LedgerWalletFirmware> GetFirmwareVersionAsync()
 		{
-			byte[] response = ExchangeSingleAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_FIRMWARE_VERSION, (byte)0x00, (byte)0x00, 0x00, OK);
+			byte[] response = await ExchangeSingleAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_FIRMWARE_VERSION, (byte)0x00, (byte)0x00, 0x00, OK).ConfigureAwait(false);
 			return new LedgerWalletFirmware(response);
 		}
-
+		public LedgerWalletFirmware GetFirmwareVersion()
+		{
+			return GetFirmwareVersionAsync().GetAwaiter().GetResult();
+		}
 		public GetWalletPubKeyResponse GetWalletPubKey(KeyPath keyPath)
+		{
+			return GetWalletPubKeyAsync(keyPath).GetAwaiter().GetResult();
+		}
+
+		public async Task<GetWalletPubKeyResponse> GetWalletPubKeyAsync(KeyPath keyPath)
 		{
 			Guard.AssertKeyPath(keyPath);
 			byte[] bytes = Serializer.Serialize(keyPath);
 			//bytes[0] = 10;
-			byte[] response = ExchangeSingleAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_WALLET_PUBLIC_KEY, (byte)0x00, (byte)0x00, bytes, OK);
+			byte[] response = await ExchangeSingleAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_WALLET_PUBLIC_KEY, (byte)0x00, (byte)0x00, bytes, OK).ConfigureAwait(false);
 			return new GetWalletPubKeyResponse(response);
+		}
+
+		public Task<TrustedInput> GetTrustedInputAsync(IndexedTxOut txout)
+		{
+			return GetTrustedInputAsync(txout.Transaction, (int)txout.N);
 		}
 
 		public TrustedInput GetTrustedInput(IndexedTxOut txout)
 		{
-			return GetTrustedInput(txout.Transaction, (int)txout.N);
+			return GetTrustedInputAsync(txout.Transaction, (int)txout.N).GetAwaiter().GetResult();
 		}
+
 		public TrustedInput GetTrustedInput(Transaction transaction, int outputIndex)
+		{
+			return GetTrustedInputAsync(transaction, outputIndex).GetAwaiter().GetResult();
+		}
+
+		public async Task<TrustedInput> GetTrustedInputAsync(Transaction transaction, int outputIndex)
 		{
 			if(outputIndex >= transaction.Outputs.Count)
 				throw new ArgumentOutOfRangeException("outputIndex is bigger than the number of outputs in the transaction", "outputIndex");
@@ -86,7 +105,7 @@ namespace LedgerWallet
 			}
 			// Locktime
 			apdus.Add(CreateAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_TRUSTED_INPUT, (byte)0x80, (byte)0x00, transaction.LockTime.ToBytes()));
-			byte[] response = ExchangeApdus(apdus.ToArray(), OK);
+			byte[] response = await ExchangeApdus(apdus.ToArray(), OK).ConfigureAwait(false);
 			return new TrustedInput(response);
 		}
 
@@ -164,8 +183,11 @@ namespace LedgerWallet
 			}
 			return apdus.ToArray();
 		}
-
 		public Transaction SignTransaction(KeyPath keyPath, ICoin[] signedCoins, Transaction[] parents, Transaction transaction, KeyPath changePath = null)
+		{
+			return SignTransactionAsync(keyPath, signedCoins, parents, transaction, changePath).GetAwaiter().GetResult();
+		}
+		public Task<Transaction> SignTransactionAsync(KeyPath keyPath, ICoin[] signedCoins, Transaction[] parents, Transaction transaction, KeyPath changePath = null)
 		{
 			List<SignatureRequest> requests = new List<SignatureRequest>();
 			foreach(var c in signedCoins)
@@ -179,12 +201,15 @@ namespace LedgerWallet
 						KeyPath = keyPath
 					});
 			}
-			return SignTransaction(requests.ToArray(), transaction, changePath: changePath);
+			return SignTransactionAsync(requests.ToArray(), transaction, changePath: changePath);
 		}
-
 		public Transaction SignTransaction(SignatureRequest[] signatureRequests, Transaction transaction, KeyPath changePath = null, bool verify = true)
 		{
-			List<TrustedInput> trustedInputs = new List<TrustedInput>();
+			return SignTransactionAsync(signatureRequests, transaction, changePath, verify).GetAwaiter().GetResult();
+		}
+		public async Task<Transaction> SignTransactionAsync(SignatureRequest[] signatureRequests, Transaction transaction, KeyPath changePath = null, bool verify = true)
+		{
+			List<Task<TrustedInput>> trustedInputs = new List<Task<TrustedInput>>();
 			Dictionary<uint256, Transaction> knownTransactions = signatureRequests
 				.Select(o => o.InputTransaction)
 				.ToDictionaryUnique(o => o.GetHash());
@@ -195,12 +220,13 @@ namespace LedgerWallet
 				Transaction parent;
 				if(!knownTransactions.TryGetValue(input.PrevOut.Hash, out parent))
 					throw new KeyNotFoundException("Parent transaction " + input.PrevOut.Hash + " not found");
-				trustedInputs.Add(GetTrustedInput(parent, (int)input.PrevOut.N));
+				trustedInputs.Add(GetTrustedInputAsync(parent, (int)input.PrevOut.N));
 			}
-			var inputs = trustedInputs.ToArray();
-
+			await Task.WhenAll(trustedInputs).ConfigureAwait(false);
+			var inputs = trustedInputs.Select(t => t.Result).ToArray();
 			transaction = transaction.Clone();
 
+			List<Task> signing = new List<Task>();
 			bool newTransaction = true;
 			foreach(var input in transaction.Inputs.AsIndexedInputs())
 			{
@@ -215,27 +241,39 @@ namespace LedgerWallet
 				apdus.AddRange(UntrustedHashTransactionInputFinalizeFull(changePath, transaction.Outputs));
 
 				var sig = UntrustedHashSign(apdus.ToArray(), previousReq.KeyPath, null, transaction.LockTime, SigHash.All);
-
-				var pubkey = previousReq.PubKey ?? GetWalletPubKey(previousReq.KeyPath).UncompressedPublicKey.Compress();
-				input.ScriptSig =
-					pubkey.ScriptPubKey == previousReq.InputCoin.TxOut.ScriptPubKey ?
-						PayToPubkeyTemplate.Instance.GenerateScriptSig(sig) :
-					pubkey.Hash.ScriptPubKey == previousReq.InputCoin.TxOut.ScriptPubKey ?
-					PayToPubkeyHashTemplate.Instance.GenerateScriptSig(sig, pubkey) : null;
-				if(input.ScriptSig == null)
-					throw new InvalidOperationException("Impossible to generate the scriptSig of this transaction");
-				if(verify)
+				signing.Add(ModifyScriptSigAndVerifySignature(sig, previousReq, input));
+			}
+			await Task.WhenAll(signing).ConfigureAwait(false);
+			if(verify)
+			{
+				foreach(var input in transaction.Inputs.AsIndexedInputs())
 				{
 					ScriptError error;
-					if(!Script.VerifyScript(previousReq.InputCoin.TxOut.ScriptPubKey, transaction, (int)input.Index, previousReq.InputCoin.TxOut.Value, out error))
+					SignatureRequest previousReq;
+					requests.TryGetValue(input.PrevOut, out previousReq);
+					if(!Script.VerifyScript(previousReq.InputCoin.TxOut.ScriptPubKey, input.Transaction, (int)input.Index, previousReq.InputCoin.TxOut.Value, out error))
 						return null;
 				}
 			}
-
 			return transaction;
 		}
 
-		public TransactionSignature UntrustedHashSign(byte[][] previousAPDUs, KeyPath keyPath, UserPin pin, LockTime lockTime, SigHash sigHashType)
+		private async Task ModifyScriptSigAndVerifySignature(Task<TransactionSignature> sigTask, SignatureRequest previousReq, IndexedTxIn input)
+		{
+			var pubkey = previousReq.PubKey ??
+						(await GetWalletPubKeyAsync(previousReq.KeyPath).ConfigureAwait(false)).UncompressedPublicKey.Compress();
+
+			var sig = await sigTask.ConfigureAwait(false);
+			input.ScriptSig =
+				pubkey.ScriptPubKey == previousReq.InputCoin.TxOut.ScriptPubKey ?
+					PayToPubkeyTemplate.Instance.GenerateScriptSig(sig) :
+				pubkey.Hash.ScriptPubKey == previousReq.InputCoin.TxOut.ScriptPubKey ?
+				PayToPubkeyHashTemplate.Instance.GenerateScriptSig(sig, pubkey) : null;
+			if(input.ScriptSig == null)
+				throw new InvalidOperationException("Impossible to generate the scriptSig of this transaction");
+		}
+
+		public async Task<TransactionSignature> UntrustedHashSign(byte[][] previousAPDUs, KeyPath keyPath, UserPin pin, LockTime lockTime, SigHash sigHashType)
 		{
 			MemoryStream data = new MemoryStream();
 			byte[] path = Serializer.Serialize(keyPath);
@@ -248,7 +286,7 @@ namespace LedgerWallet
 			data.WriteByte((byte)sigHashType);
 			var lastAPDU = CreateAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_HASH_SIGN, (byte)0x00, (byte)0x00, data.ToArray());
 
-			byte[] response = ExchangeApdus(previousAPDUs.Concat(new[] { lastAPDU }).ToArray(), OK);
+			byte[] response = await ExchangeApdus(previousAPDUs.Concat(new[] { lastAPDU }).ToArray(), OK).ConfigureAwait(false);
 			response[0] = (byte)0x30;
 			return new TransactionSignature(response);
 		}

@@ -197,9 +197,18 @@ namespace LedgerWallet.U2F
 
 		public U2FRegistrationResponse Register(AppId applicationId, CancellationToken cancellationToken = default(CancellationToken))
 		{
-			return Register(RandomUtils.GetBytes(32), applicationId, cancellationToken);
+			return RegisterAsync(applicationId, cancellationToken).GetAwaiter().GetResult();
 		}
 		public U2FRegistrationResponse Register(byte[] challenge, AppId applicationId, CancellationToken cancellationToken = default(CancellationToken))
+		{
+			return RegisterAsync(challenge, applicationId, cancellationToken).GetAwaiter().GetResult();
+		}
+
+		public Task<U2FRegistrationResponse> RegisterAsync(AppId applicationId, CancellationToken cancellationToken = default(CancellationToken))
+		{
+			return RegisterAsync(RandomUtils.GetBytes(32), applicationId, cancellationToken);
+		}
+		public async Task<U2FRegistrationResponse> RegisterAsync(byte[] challenge, AppId applicationId, CancellationToken cancellationToken = default(CancellationToken))
 		{
 			if(challenge == null)
 				throw new ArgumentNullException("challenge");
@@ -212,11 +221,15 @@ namespace LedgerWallet.U2F
 			var data = new byte[64];
 			Array.Copy(challenge, 0, data, 0, 32);
 			Array.Copy(applicationId.GetBytes(true), 0, data, 32, 32);
-			var result = this.ExchangeApdu(INS_ENROLL, 0x03, 0x00, data, cancellationToken);
+			var result = await this.ExchangeApdu(INS_ENROLL, 0x03, 0x00, data, cancellationToken).ConfigureAwait(false);
 			return new U2FRegistrationResponse(result);
 		}
 
 		public U2FAuthenticationResponse Authenticate(byte[] challenge, AppId applicationId, KeyHandle keyHandle, CancellationToken cancellationToken = default(CancellationToken))
+		{
+			return AuthenticateAsync(challenge, applicationId, keyHandle, cancellationToken).GetAwaiter().GetResult();
+		}
+		public async Task<U2FAuthenticationResponse> AuthenticateAsync(byte[] challenge, AppId applicationId, KeyHandle keyHandle, CancellationToken cancellationToken = default(CancellationToken))
 		{
 			if(challenge == null)
 				throw new ArgumentNullException("challenge");
@@ -230,11 +243,11 @@ namespace LedgerWallet.U2F
 			Array.Copy(applicationId.GetBytes(true), 0, data, 32, 32);
 			data[64] = (byte)keyHandle.Length;
 			Array.Copy(keyHandle.GetBytes(true), 0, data, 65, keyHandle.Length);
-			var result = this.ExchangeApdu(INS_SIGN, 0x03, 0x00, data, cancellationToken);
+			var result = await this.ExchangeApdu(INS_SIGN, 0x03, 0x00, data, cancellationToken).ConfigureAwait(false);
 			return new U2FAuthenticationResponse(result);
 		}
 
-		private byte[] ExchangeApdu(byte ins, byte p1, byte p2, byte[] data, CancellationToken cancellationToken)
+		private Task<byte[]> ExchangeApdu(byte ins, byte p1, byte p2, byte[] data, CancellationToken cancellationToken)
 		{
 			while(true)
 			{
@@ -262,16 +275,15 @@ namespace LedgerWallet.U2F
 			}
 		}
 
-		protected byte[] ExchangeApduNoDataLength(byte cla, byte ins, byte p1, byte p2, byte[] data, out int sw)
+		protected Task<APDUResponse> ExchangeApduNoDataLength(byte cla, byte ins, byte p1, byte p2, byte[] data)
 		{
-			sw = 0;
 			byte[] apdu = new byte[data.Length + 5];
 			apdu[0] = cla;
 			apdu[1] = ins;
 			apdu[2] = p1;
 			apdu[3] = p2;
 			Array.Copy(data, 0, apdu, 4, data.Length);
-			return Exchange(new byte[][] { apdu }, out sw);
+			return Exchange(new byte[][] { apdu });
 		}
 
 	}
