@@ -154,7 +154,7 @@ namespace LedgerWallet
 
 		protected Task<APDUResponse> ExchangeSingleAPDU(byte cla, byte ins, byte p1, byte p2, byte[] data)
 		{
-			return Exchange(new byte[][] { CreateAPDU(cla, ins, p1, p2, data) });
+			return ExchangeSingle(new byte[][] { CreateAPDU(cla, ins, p1, p2, data) });
 		}
 
 		protected Task<byte[]> ExchangeSingleAPDU(byte cla, byte ins, byte p1, byte p2, int length, int[] acceptedSW)
@@ -168,26 +168,41 @@ namespace LedgerWallet
 
 		protected async Task<byte[]> ExchangeApdus(byte[][] apdus, int[] acceptedSW)
 		{
-			var resp = await Exchange(apdus).ConfigureAwait(false);
+			var resp = await ExchangeSingle(apdus).ConfigureAwait(false);
 			CheckSW(acceptedSW, resp.SW);
 			return resp.Response;
 		}
-		
 
-		protected async Task<APDUResponse> Exchange(byte[][] apdus)
+		protected async Task<APDUResponse> ExchangeSingle(byte[][] apdus)
 		{
-			byte[] response = await Transport.Exchange(apdus).ConfigureAwait(false);
-			if(response.Length < 2)
+			var responses = await Exchange(apdus).ConfigureAwait(false);
+			var last = responses.Last();
+			foreach(var response in responses)
 			{
-				throw new LedgerWalletException("Truncated response");
+				if(response != last)
+					CheckSW(OK, response.SW);
 			}
-			int sw = ((int)(response[response.Length - 2] & 0xff) << 8) |
-					(int)(response[response.Length - 1] & 0xff);
-			if(sw == 0x6faa)
-				Throw(sw);
-			byte[] result = new byte[response.Length - 2];
-			Array.Copy(response, 0, result, 0, response.Length - 2);
-			return new APDUResponse() { Response = result, SW = sw };
+			return last;
+		}
+		protected async Task<APDUResponse[]> Exchange(byte[][] apdus)
+		{
+			byte[][] responses = await Transport.Exchange(apdus).ConfigureAwait(false);
+			List<APDUResponse> resultResponses = new List<APDUResponse>();
+			foreach(var response in responses)
+			{
+				if(response.Length < 2)
+				{
+					throw new LedgerWalletException("Truncated response");
+				}
+				int sw = ((int)(response[response.Length - 2] & 0xff) << 8) |
+						(int)(response[response.Length - 1] & 0xff);
+				if(sw == 0x6faa)
+					Throw(sw);
+				byte[] result = new byte[response.Length - 2];
+				Array.Copy(response, 0, result, 0, response.Length - 2);
+				resultResponses.Add(new APDUResponse() { Response = result, SW = sw });
+			}
+			return resultResponses.ToArray();
 		}
 	}
 }

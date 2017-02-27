@@ -283,7 +283,7 @@ namespace LedgerWallet.U2F
 			apdu[2] = p1;
 			apdu[3] = p2;
 			Array.Copy(data, 0, apdu, 4, data.Length);
-			return Exchange(new byte[][] { apdu });
+			return ExchangeSingle(new byte[][] { apdu });
 		}
 
 	}

@@ -86,7 +86,7 @@ namespace LedgerWallet.Transports
 		}
 
 		bool initializing = false;
-		public async Task<byte[]> Exchange(byte[][] apdus)
+		public async Task<byte[][]> Exchange(byte[][] apdus)
 		{
 			if(needInit && !initializing)
 			{
@@ -151,30 +151,24 @@ namespace LedgerWallet.Transports
 		const uint MAX_BLOCK = 64;
 		const int DEFAULT_TIMEOUT = 20000;
 
-		internal Task<byte[]> ExchangeCore(byte[][] apdus)
+		internal Task<byte[][]> ExchangeCore(byte[][] apdus)
 		{
 			if(apdus == null || apdus.Length == 0)
 				return null;
-			byte[] result = null;
+			List<byte[]> resultList = new List<byte[]>();
 			var lastAPDU = apdus.Last();
 			using(Lock())
 			{
 				foreach(var apdu in apdus)
 				{
 					Write(apdu);
-					result = Read();
+					var result = Read();
 					if(result == null)
-						return Task.FromResult<byte[]>(null);
-					if(!IsOK(result) && lastAPDU != apdu)
-						return Task.FromResult(result);
+						return Task.FromResult<byte[][]>(null);
+					resultList.Add(result);
 				}
 			}
-			return Task.FromResult(result);
-		}
-
-		private bool IsOK(byte[] result)
-		{
-			return result.Length >= 2 && result[result.Length - 2] == 0x90 && result[result.Length - 1] == 0x00;
+			return Task.FromResult(resultList.ToArray());
 		}
 
 		protected byte[] Read()
