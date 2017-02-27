@@ -187,7 +187,7 @@ namespace LedgerWallet
 				Throw(sw);
 			byte[] result = new byte[response.Length - 2];
 			Array.Copy(response, 0, result, 0, response.Length - 2);
-			return new APDUResponse() { Response = response, SW = sw };
+			return new APDUResponse() { Response = result, SW = sw };
 		}
 	}
 }
