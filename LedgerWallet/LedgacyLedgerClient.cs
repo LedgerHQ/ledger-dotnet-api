@@ -31,27 +31,21 @@ namespace LedgerWallet
 		}
 		public bool VerifyPin(UserPin pin, out int remaining)
 		{
-			using(Transport.Lock())
-			{
-				int lastSW;
-				remaining = 3;
-				var response = ExchangeApdu(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_VERIFY_PIN, 0, 0, pin.ToBytes(), out lastSW);
-				if(lastSW == LedgerWalletConstants.SW_OK)
-					return true;
-				if(lastSW == LedgerWalletConstants.SW_INS_NOT_SUPPORTED)
-					Throw(lastSW);
-				remaining = (lastSW & 0x0F);
-				return false;
-			}
+			int lastSW;
+			remaining = 3;
+			var response = ExchangeSingleAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_VERIFY_PIN, 0, 0, pin.ToBytes(), out lastSW);
+			if(lastSW == LedgerWalletConstants.SW_OK)
+				return true;
+			if(lastSW == LedgerWalletConstants.SW_INS_NOT_SUPPORTED)
+				Throw(lastSW);
+			remaining = (lastSW & 0x0F);
+			return false;
 		}
 		public int GetRemainingAttempts()
 		{
-			using(Transport.Lock())
-			{
-				int lastSW;
-				var response = ExchangeApdu(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_VERIFY_PIN, 0x80, 0, new byte[] { 1 }, out lastSW);
-				return (lastSW & 0x0F);
-			}
+			int lastSW;
+			var response = ExchangeSingleAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_VERIFY_PIN, 0x80, 0, new byte[] { 1 }, out lastSW);
+			return (lastSW & 0x0F);
 		}
 		public bool VerifyPin(string pin)
 		{
@@ -66,37 +60,25 @@ namespace LedgerWallet
 
 		public OperationMode GetOperationMode()
 		{
-			using(Transport.Lock())
-			{
-				var response = ExchangeApdu(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_OPERATION_MODE, 0, 0, 0, OK);
-				return (OperationMode)response[0];
-			}
+			var response = ExchangeSingleAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_OPERATION_MODE, 0, 0, 0, OK);
+			return (OperationMode)response[0];
 		}
 
 		public SecondFactorMode GetSecondFactorMode()
 		{
-			using(Transport.Lock())
-			{
-				var response = ExchangeApdu(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_OPERATION_MODE, 1, 0, 0, OK);
-				return (SecondFactorMode)response[0];
-			}
+			var response = ExchangeSingleAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_OPERATION_MODE, 1, 0, 0, OK);
+			return (SecondFactorMode)response[0];
 		}
 
 		public void SetOperationMode(OperationMode value)
 		{
-			using(Transport.Lock())
-			{
-				ExchangeApdu(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_SET_OPERATION_MODE, 0, 0, new[] { (byte)value }, OK);
-			}
+			ExchangeSingleAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_SET_OPERATION_MODE, 0, 0, new[] { (byte)value }, OK);
 		}
 
 		public SetupResponse RegularSetup(RegularSetup setup)
 		{
-			using(Transport.Lock())
-			{
-				var response = ExchangeApdu(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_SETUP, 0, 0, setup.ToBytes(), OK);
-				return new SetupResponse(response);
-			}
+			var response = ExchangeSingleAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_SETUP, 0, 0, setup.ToBytes(), OK);
+			return new SetupResponse(response);
 		}
 	}
 

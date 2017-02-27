@@ -30,23 +30,17 @@ namespace LedgerWallet
 
 		public LedgerWalletFirmware GetFirmwareVersion()
 		{
-			using(Transport.Lock())
-			{
-				byte[] response = ExchangeApdu(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_FIRMWARE_VERSION, (byte)0x00, (byte)0x00, 0x00, OK);
-				return new LedgerWalletFirmware(response);
-			}
+			byte[] response = ExchangeSingleAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_FIRMWARE_VERSION, (byte)0x00, (byte)0x00, 0x00, OK);
+			return new LedgerWalletFirmware(response);
 		}
 
 		public GetWalletPubKeyResponse GetWalletPubKey(KeyPath keyPath)
 		{
-			using(Transport.Lock())
-			{
-				Guard.AssertKeyPath(keyPath);
-				byte[] bytes = Serializer.Serialize(keyPath);
-				//bytes[0] = 10;
-				byte[] response = ExchangeApdu(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_WALLET_PUBLIC_KEY, (byte)0x00, (byte)0x00, bytes, OK);
-				return new GetWalletPubKeyResponse(response);
-			}
+			Guard.AssertKeyPath(keyPath);
+			byte[] bytes = Serializer.Serialize(keyPath);
+			//bytes[0] = 10;
+			byte[] response = ExchangeSingleAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_WALLET_PUBLIC_KEY, (byte)0x00, (byte)0x00, bytes, OK);
+			return new GetWalletPubKeyResponse(response);
 		}
 
 		public TrustedInput GetTrustedInput(IndexedTxOut txout)
@@ -55,131 +49,120 @@ namespace LedgerWallet
 		}
 		public TrustedInput GetTrustedInput(Transaction transaction, int outputIndex)
 		{
-			using(Transport.Lock())
+			if(outputIndex >= transaction.Outputs.Count)
+				throw new ArgumentOutOfRangeException("outputIndex is bigger than the number of outputs in the transaction", "outputIndex");
+			List<byte[]> apdus = new List<byte[]>();
+			MemoryStream data = new MemoryStream();
+			// Header
+			BufferUtils.WriteUint32BE(data, outputIndex);
+			BufferUtils.WriteBuffer(data, transaction.Version);
+			VarintUtils.write(data, transaction.Inputs.Count);
+			apdus.Add(CreateAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_TRUSTED_INPUT, (byte)0x00, (byte)0x00, data.ToArray()));
+			// Each input
+			foreach(var input in transaction.Inputs)
 			{
-				if(outputIndex >= transaction.Outputs.Count)
-					throw new ArgumentOutOfRangeException("outputIndex is bigger than the number of outputs in the transaction", "outputIndex");
-				MemoryStream data = new MemoryStream();
-				// Header
-				BufferUtils.WriteUint32BE(data, outputIndex);
-				BufferUtils.WriteBuffer(data, transaction.Version);
-				VarintUtils.write(data, transaction.Inputs.Count);
-				ExchangeApdu(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_TRUSTED_INPUT, (byte)0x00, (byte)0x00, data.ToArray(), OK);
-				// Each input
-				foreach(var input in transaction.Inputs)
-				{
-					data = new MemoryStream();
-					BufferUtils.WriteBuffer(data, input.PrevOut);
-					VarintUtils.write(data, input.ScriptSig.Length);
-					ExchangeApdu(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_TRUSTED_INPUT, (byte)0x80, (byte)0x00, data.ToArray(), OK);
-					data = new MemoryStream();
-					BufferUtils.WriteBuffer(data, input.ScriptSig.ToBytes());
-					ExchangeApduSplit2(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_TRUSTED_INPUT, (byte)0x80, (byte)0x00, data.ToArray(), Utils.ToBytes(input.Sequence, true), OK);
-				}
-				// Number of outputs
 				data = new MemoryStream();
-				VarintUtils.write(data, transaction.Outputs.Count);
-				ExchangeApdu(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_TRUSTED_INPUT, (byte)0x80, (byte)0x00, data.ToArray(), OK);
-				// Each output
-				foreach(var output in transaction.Outputs)
-				{
-					data = new MemoryStream();
-					BufferUtils.WriteBuffer(data, Utils.ToBytes((ulong)output.Value.Satoshi, true));
-					VarintUtils.write(data, output.ScriptPubKey.Length);
-					ExchangeApdu(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_TRUSTED_INPUT, (byte)0x80, (byte)0x00, data.ToArray(), OK);
-					data = new MemoryStream();
-					BufferUtils.WriteBuffer(data, output.ScriptPubKey.ToBytes());
-					ExchangeApduSplit(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_TRUSTED_INPUT, (byte)0x80, (byte)0x00, data.ToArray(), OK);
-				}
-				// Locktime
-				byte[] response = ExchangeApdu(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_TRUSTED_INPUT, (byte)0x80, (byte)0x00, transaction.LockTime.ToBytes(), OK);
-				return new TrustedInput(response);
+				BufferUtils.WriteBuffer(data, input.PrevOut);
+				VarintUtils.write(data, input.ScriptSig.Length);
+				apdus.Add(CreateAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_TRUSTED_INPUT, (byte)0x80, (byte)0x00, data.ToArray()));
+				data = new MemoryStream();
+				BufferUtils.WriteBuffer(data, input.ScriptSig.ToBytes());
+				apdus.AddRange(CreateApduSplit2(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_TRUSTED_INPUT, (byte)0x80, (byte)0x00, data.ToArray(), Utils.ToBytes(input.Sequence, true)));
 			}
+			// Number of outputs
+			data = new MemoryStream();
+			VarintUtils.write(data, transaction.Outputs.Count);
+			apdus.Add(CreateAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_TRUSTED_INPUT, (byte)0x80, (byte)0x00, data.ToArray()));
+			// Each output
+			foreach(var output in transaction.Outputs)
+			{
+				data = new MemoryStream();
+				BufferUtils.WriteBuffer(data, Utils.ToBytes((ulong)output.Value.Satoshi, true));
+				VarintUtils.write(data, output.ScriptPubKey.Length);
+				apdus.Add(CreateAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_TRUSTED_INPUT, (byte)0x80, (byte)0x00, data.ToArray()));
+				data = new MemoryStream();
+				BufferUtils.WriteBuffer(data, output.ScriptPubKey.ToBytes());
+				apdus.AddRange(CreateAPDUSplit(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_TRUSTED_INPUT, (byte)0x80, (byte)0x00, data.ToArray()));
+			}
+			// Locktime
+			apdus.Add(CreateAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_TRUSTED_INPUT, (byte)0x80, (byte)0x00, transaction.LockTime.ToBytes()));
+			byte[] response = ExchangeApdus(apdus.ToArray(), OK);
+			return new TrustedInput(response);
 		}
 
 		public void UntrustedHashTransactionInputStart(bool newTransaction, Transaction tx, int index, TrustedInput[] trustedInputs)
 		{
 			UntrustedHashTransactionInputStart(newTransaction, tx.Inputs.AsIndexedInputs().Skip(index).First(), trustedInputs);
 		}
-		public void UntrustedHashTransactionInputStart(bool newTransaction, IndexedTxIn txIn, TrustedInput[] trustedInputs)
+		public byte[][] UntrustedHashTransactionInputStart(bool newTransaction, IndexedTxIn txIn, TrustedInput[] trustedInputs)
 		{
-			using(Transport.Lock())
+			List<byte[]> apdus = new List<byte[]>();
+			trustedInputs = trustedInputs ?? new TrustedInput[0];
+			// Start building a fake transaction with the passed inputs
+			MemoryStream data = new MemoryStream();
+			BufferUtils.WriteBuffer(data, txIn.Transaction.Version);
+			VarintUtils.write(data, txIn.Transaction.Inputs.Count);
+			apdus.Add(CreateAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_HASH_INPUT_START, (byte)0x00, (newTransaction ? (byte)0x00 : (byte)0x80), data.ToArray()));
+			// Loop for each input
+			long currentIndex = 0;
+			foreach(var input in txIn.Transaction.Inputs)
 			{
-				trustedInputs = trustedInputs ?? new TrustedInput[0];
-				// Start building a fake transaction with the passed inputs
-				MemoryStream data = new MemoryStream();
-				BufferUtils.WriteBuffer(data, txIn.Transaction.Version);
-				VarintUtils.write(data, txIn.Transaction.Inputs.Count);
-				ExchangeApdu(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_HASH_INPUT_START, (byte)0x00, (newTransaction ? (byte)0x00 : (byte)0x80), data.ToArray(), OK);
-				// Loop for each input
-				long currentIndex = 0;
-				foreach(var input in txIn.Transaction.Inputs)
+				var trustedInput = trustedInputs.FirstOrDefault(i => i.OutPoint == input.PrevOut);
+				byte[] script = (currentIndex == txIn.Index ? txIn.TxIn.ScriptSig.ToBytes() : new byte[0]);
+				data = new MemoryStream();
+				if(trustedInput != null)
 				{
-					var trustedInput = trustedInputs.FirstOrDefault(i => i.OutPoint == input.PrevOut);
-					byte[] script = (currentIndex == txIn.Index ? txIn.TxIn.ScriptSig.ToBytes() : new byte[0]);
-					data = new MemoryStream();
-					if(trustedInput != null)
-					{
-						data.WriteByte(0x01);
-						var b = trustedInput.ToBytes();
-						// untrusted inputs have constant length
-						data.WriteByte((byte)b.Length);
-						BufferUtils.WriteBuffer(data, b);
-					}
-					else
-					{
-						data.WriteByte(0x00);
-						BufferUtils.WriteBuffer(data, input.PrevOut);
-					}
-					VarintUtils.write(data, script.Length);
-					ExchangeApdu(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_HASH_INPUT_START, (byte)0x80, (byte)0x00, data.ToArray(), OK);
-					data = new MemoryStream();
-					BufferUtils.WriteBuffer(data, script);
-					BufferUtils.WriteBuffer(data, input.Sequence);
-					ExchangeApduSplit(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_HASH_INPUT_START, (byte)0x80, (byte)0x00, data.ToArray(), OK);
-					currentIndex++;
+					data.WriteByte(0x01);
+					var b = trustedInput.ToBytes();
+					// untrusted inputs have constant length
+					data.WriteByte((byte)b.Length);
+					BufferUtils.WriteBuffer(data, b);
 				}
+				else
+				{
+					data.WriteByte(0x00);
+					BufferUtils.WriteBuffer(data, input.PrevOut);
+				}
+				VarintUtils.write(data, script.Length);
+				apdus.Add(CreateAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_HASH_INPUT_START, (byte)0x80, (byte)0x00, data.ToArray()));
+				data = new MemoryStream();
+				BufferUtils.WriteBuffer(data, script);
+				BufferUtils.WriteBuffer(data, input.Sequence);
+				apdus.AddRange(CreateAPDUSplit(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_HASH_INPUT_START, (byte)0x80, (byte)0x00, data.ToArray()));
+				currentIndex++;
 			}
+			return apdus.ToArray();
 		}
 
-		public byte[] UntrustedHashTransactionInputFinalizeFull(KeyPath change, IEnumerable<TxOut> outputs)
+		public byte[][] UntrustedHashTransactionInputFinalizeFull(KeyPath change, IEnumerable<TxOut> outputs)
 		{
-			using(Transport.Lock())
+			List<byte[]> apdus = new List<byte[]>();
+			if(change != null)
 			{
-				if(change != null)
-				{
-					ExchangeApdu(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_HASH_INPUT_FINALIZE_FULL, 0xFF, 0x00, Serializer.Serialize(change), OK);
-				}
-
-				byte[] result = null;
-				int offset = 0;
-				byte[] response = null;
-				var ms = new MemoryStream();
-				BitcoinStream bs = new BitcoinStream(ms, true);
-				var list = outputs.ToList();
-				bs.ReadWrite<List<TxOut>, TxOut>(ref list);
-				var data = ms.ToArray();
-
-				while(offset < data.Length)
-				{
-					int blockLength = ((data.Length - offset) > 255 ? 255 : data.Length - offset);
-					byte[] apdu = new byte[blockLength + 5];
-					apdu[0] = LedgerWalletConstants.LedgerWallet_CLA;
-					apdu[1] = LedgerWalletConstants.LedgerWallet_INS_HASH_INPUT_FINALIZE_FULL;
-					apdu[2] = ((offset + blockLength) == data.Length ? (byte)0x80 : (byte)0x00);
-					apdu[3] = (byte)0x00;
-					apdu[4] = (byte)(blockLength);
-					Array.Copy(data, offset, apdu, 5, blockLength);
-					response = ExchangeApdu(apdu, OK);
-					offset += blockLength;
-				}
-				result = response; //convertResponseToOutput(response);
-				if(result == null)
-				{
-					throw new LedgerWalletException("Unsupported user confirmation method");
-				}
-				return result;
+				apdus.Add(CreateAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_HASH_INPUT_FINALIZE_FULL, 0xFF, 0x00, Serializer.Serialize(change)));
 			}
+
+			int offset = 0;
+			var ms = new MemoryStream();
+			BitcoinStream bs = new BitcoinStream(ms, true);
+			var list = outputs.ToList();
+			bs.ReadWrite<List<TxOut>, TxOut>(ref list);
+			var data = ms.ToArray();
+
+			while(offset < data.Length)
+			{
+				int blockLength = ((data.Length - offset) > 255 ? 255 : data.Length - offset);
+				byte[] apdu = new byte[blockLength + 5];
+				apdu[0] = LedgerWalletConstants.LedgerWallet_CLA;
+				apdu[1] = LedgerWalletConstants.LedgerWallet_INS_HASH_INPUT_FINALIZE_FULL;
+				apdu[2] = ((offset + blockLength) == data.Length ? (byte)0x80 : (byte)0x00);
+				apdu[3] = (byte)0x00;
+				apdu[4] = (byte)(blockLength);
+				Array.Copy(data, offset, apdu, 5, blockLength);
+				apdus.Add(apdu);
+				offset += blockLength;
+			}
+			return apdus.ToArray();
 		}
 
 		public Transaction SignTransaction(KeyPath keyPath, ICoin[] signedCoins, Transaction[] parents, Transaction transaction, KeyPath changePath = null)
@@ -214,63 +197,60 @@ namespace LedgerWallet
 					throw new KeyNotFoundException("Parent transaction " + input.PrevOut.Hash + " not found");
 				trustedInputs.Add(GetTrustedInput(parent, (int)input.PrevOut.N));
 			}
-			using(Transport.Lock())
+			var inputs = trustedInputs.ToArray();
+
+			transaction = transaction.Clone();
+
+			bool newTransaction = true;
+			foreach(var input in transaction.Inputs.AsIndexedInputs())
 			{
-				var inputs = trustedInputs.ToArray();
+				List<byte[]> apdus = new List<byte[]>();
+				SignatureRequest previousReq;
+				if(requests.TryGetValue(input.PrevOut, out previousReq))
+					input.ScriptSig = previousReq.InputCoin.GetScriptCode();
 
-				transaction = transaction.Clone();
-				
-				bool newTransaction = true;
-				foreach(var input in transaction.Inputs.AsIndexedInputs())
+				apdus.AddRange(UntrustedHashTransactionInputStart(newTransaction, input, inputs));
+				newTransaction = false;
+
+				apdus.AddRange(UntrustedHashTransactionInputFinalizeFull(changePath, transaction.Outputs));
+
+				var sig = UntrustedHashSign(apdus.ToArray(), previousReq.KeyPath, null, transaction.LockTime, SigHash.All);
+
+				var pubkey = previousReq.PubKey ?? GetWalletPubKey(previousReq.KeyPath).UncompressedPublicKey.Compress();
+				input.ScriptSig =
+					pubkey.ScriptPubKey == previousReq.InputCoin.TxOut.ScriptPubKey ?
+						PayToPubkeyTemplate.Instance.GenerateScriptSig(sig) :
+					pubkey.Hash.ScriptPubKey == previousReq.InputCoin.TxOut.ScriptPubKey ?
+					PayToPubkeyHashTemplate.Instance.GenerateScriptSig(sig, pubkey) : null;
+				if(input.ScriptSig == null)
+					throw new InvalidOperationException("Impossible to generate the scriptSig of this transaction");
+				if(verify)
 				{
-					SignatureRequest previousReq;
-					if(requests.TryGetValue(input.PrevOut, out previousReq))
-						input.ScriptSig = previousReq.InputCoin.GetScriptCode();
-
-					UntrustedHashTransactionInputStart(newTransaction, input, inputs);
-					newTransaction = false;
-
-					UntrustedHashTransactionInputFinalizeFull(changePath, transaction.Outputs);
-
-					var sig = UntrustedHashSign(previousReq.KeyPath, null, transaction.LockTime, SigHash.All);
-
-					var pubkey = previousReq.PubKey ?? GetWalletPubKey(previousReq.KeyPath).UncompressedPublicKey.Compress();
-					input.ScriptSig =
-						pubkey.ScriptPubKey == previousReq.InputCoin.TxOut.ScriptPubKey ?
-							PayToPubkeyTemplate.Instance.GenerateScriptSig(sig) :
-						pubkey.Hash.ScriptPubKey == previousReq.InputCoin.TxOut.ScriptPubKey ?
-						PayToPubkeyHashTemplate.Instance.GenerateScriptSig(sig, pubkey) : null;
-					if(input.ScriptSig == null)
-						throw new InvalidOperationException("Impossible to generate the scriptSig of this transaction");
-					if(verify)
-					{
-						ScriptError error;
-						if(!Script.VerifyScript(previousReq.InputCoin.TxOut.ScriptPubKey, transaction, (int)input.Index, previousReq.InputCoin.TxOut.Value, out error))
-							return null;
-					}
+					ScriptError error;
+					if(!Script.VerifyScript(previousReq.InputCoin.TxOut.ScriptPubKey, transaction, (int)input.Index, previousReq.InputCoin.TxOut.Value, out error))
+						return null;
 				}
-
-				return transaction;
 			}
+
+			return transaction;
 		}
 
-		public TransactionSignature UntrustedHashSign(KeyPath keyPath, UserPin pin, LockTime lockTime, SigHash sigHashType)
+		public TransactionSignature UntrustedHashSign(byte[][] previousAPDUs, KeyPath keyPath, UserPin pin, LockTime lockTime, SigHash sigHashType)
 		{
-			using(Transport.Lock())
-			{
-				MemoryStream data = new MemoryStream();
-				byte[] path = Serializer.Serialize(keyPath);
-				BufferUtils.WriteBuffer(data, path);
+			MemoryStream data = new MemoryStream();
+			byte[] path = Serializer.Serialize(keyPath);
+			BufferUtils.WriteBuffer(data, path);
 
-				var pinBytes = pin == null ? new byte[0] : pin.ToBytes();
-				data.WriteByte((byte)pinBytes.Length);
-				BufferUtils.WriteBuffer(data, pinBytes);
-				BufferUtils.WriteUint32BE(data, (uint)lockTime);
-				data.WriteByte((byte)sigHashType);
-				byte[] response = ExchangeApdu(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_HASH_SIGN, (byte)0x00, (byte)0x00, data.ToArray(), OK);
-				response[0] = (byte)0x30;
-				return new TransactionSignature(response);
-			}
+			var pinBytes = pin == null ? new byte[0] : pin.ToBytes();
+			data.WriteByte((byte)pinBytes.Length);
+			BufferUtils.WriteBuffer(data, pinBytes);
+			BufferUtils.WriteUint32BE(data, (uint)lockTime);
+			data.WriteByte((byte)sigHashType);
+			var lastAPDU = CreateAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_HASH_SIGN, (byte)0x00, (byte)0x00, data.ToArray());
+
+			byte[] response = ExchangeApdus(previousAPDUs.Concat(new[] { lastAPDU }).ToArray(), OK);
+			response[0] = (byte)0x30;
+			return new TransactionSignature(response);
 		}
 	}
 

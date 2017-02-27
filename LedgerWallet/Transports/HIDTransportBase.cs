@@ -86,7 +86,7 @@ namespace LedgerWallet.Transports
 		}
 
 		bool initializing = false;
-		public byte[] Exchange(byte[] apdu)
+		public byte[] Exchange(byte[][] apdus)
 		{
 			if(needInit && !initializing)
 			{
@@ -95,14 +95,14 @@ namespace LedgerWallet.Transports
 				needInit = false;
 				initializing = false;
 			}
-			var response = ExchangeCore(apdu);
+			var response = ExchangeCore(apdus);
 			if(response == null)
 			{
 				if(!RenewTransport())
 				{
 					throw new LedgerWalletException("Ledger disconnected");
 				}
-				response = ExchangeCore(apdu);
+				response = ExchangeCore(apdus);
 				if(response == null)
 					throw new LedgerWalletException("Error while transmission");
 			}
@@ -141,9 +141,9 @@ namespace LedgerWallet.Transports
 
 			}
 			return devices
-				.Where(d=> 
-				acceptedUsages == null || 
-				acceptedUsages.Length == 0 || 
+				.Where(d =>
+				acceptedUsages == null ||
+				acceptedUsages.Length == 0 ||
 				acceptedUsages.Any(u => (ushort)d.Capabilities.UsagePage == u.UsagePage && (ushort)d.Capabilities.Usage == u.Usage));
 		}
 
@@ -151,15 +151,30 @@ namespace LedgerWallet.Transports
 		const uint MAX_BLOCK = 64;
 		const int DEFAULT_TIMEOUT = 20000;
 
-		internal byte[] ExchangeCore(byte[] apdu)
+		internal byte[] ExchangeCore(byte[][] apdus)
 		{
-			using(this.Lock())
+			if(apdus == null || apdus.Length == 0)
+				return null;
+			byte[] result = null;
+			var lastAPDU = apdus.Last();
+			using(Lock())
 			{
-				if(apdu == null)
-					return null;
-				Write(apdu);
-				return Read();
+				foreach(var apdu in apdus)
+				{
+					Write(apdu);
+					result = Read();
+					if(result == null)
+						return null;
+					if(!IsOK(result) && lastAPDU != apdu)
+						return result;
+				}
 			}
+			return result;
+		}
+
+		private bool IsOK(byte[] result)
+		{
+			return result.Length >= 2 && result[result.Length - 2] == 0x90 && result[result.Length - 1] == 0x00;
 		}
 
 		protected byte[] Read()
@@ -237,11 +252,6 @@ namespace LedgerWallet.Transports
 				return -1;
 			Array.Copy(sent, 0, buffer, 0, length);
 			return length;
-		}
-
-		public void ExchangeAsync(byte[] apdu)
-		{
-			Exchange(apdu);
 		}
 	}
 }

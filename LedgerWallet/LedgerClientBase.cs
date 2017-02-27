@@ -26,18 +26,22 @@ namespace LedgerWallet
 			this._Transport = transport;
 		}
 
-		protected byte[] ExchangeApdu(byte cla, byte ins, byte p1, byte p2, byte[] data, int[] acceptedSW)
+		protected byte[] CreateAPDU(byte cla, byte ins, byte p1, byte p2, byte[] data)
 		{
-			int sw;
-			var response = ExchangeApdu(cla, ins, p1, p2, data, out sw);
-			CheckSW(acceptedSW, sw);
-			return response;
+			byte[] apdu = new byte[data.Length + 5];
+			apdu[0] = cla;
+			apdu[1] = ins;
+			apdu[2] = p1;
+			apdu[3] = p2;
+			apdu[4] = (byte)(data.Length);
+			Array.Copy(data, 0, apdu, 5, data.Length);
+			return apdu;
 		}
 
-		protected byte[] ExchangeApduSplit(byte cla, byte ins, byte p1, byte p2, byte[] data, int[] acceptedSW)
+		protected byte[][] CreateAPDUSplit(byte cla, byte ins, byte p1, byte p2, byte[] data)
 		{
 			int offset = 0;
-			byte[] result = null;
+			List<byte[]> result = new List<byte[]>();
 			while(offset < data.Length)
 			{
 				int blockLength = ((data.Length - offset) > 255 ? 255 : data.Length - offset);
@@ -48,17 +52,17 @@ namespace LedgerWallet
 				apdu[3] = p2;
 				apdu[4] = (byte)(blockLength);
 				Array.Copy(data, offset, apdu, 5, blockLength);
-				result = ExchangeApdu(apdu, acceptedSW);
+				result.Add(apdu);
 				offset += blockLength;
 			}
-			return result;
+			return result.ToArray();
 		}
 
-		protected byte[] ExchangeApduSplit2(byte cla, byte ins, byte p1, byte p2, byte[] data, byte[] data2, int[] acceptedSW)
+		protected byte[][] CreateApduSplit2(byte cla, byte ins, byte p1, byte p2, byte[] data, byte[] data2)
 		{
 			int offset = 0;
-			byte[] result = null;
 			int maxBlockSize = 255 - data2.Length;
+			List<byte[]> apdus = new List<byte[]>();
 			while(offset < data.Length)
 			{
 				int blockLength = ((data.Length - offset) > maxBlockSize ? maxBlockSize : data.Length - offset);
@@ -74,10 +78,10 @@ namespace LedgerWallet
 				{
 					Array.Copy(data2, 0, apdu, 5 + blockLength, data2.Length);
 				}
-				result = ExchangeApdu(apdu, acceptedSW);
+				apdus.Add(apdu);
 				offset += blockLength;
 			}
-			return result;
+			return apdus.ToArray();
 		}
 
 		protected void Throw(int sw)
@@ -131,39 +135,38 @@ namespace LedgerWallet
 			}
 		}
 
-		protected byte[] ExchangeApdu(byte cla, byte ins, byte p1, byte p2, byte[] data, out int sw)
+
+		protected byte[] ExchangeSingleAPDU(byte cla, byte ins, byte p1, byte p2, byte[] data, int[] acceptedSW)
 		{
-			sw = 0;
-			byte[] apdu = new byte[data.Length + 5];
-			apdu[0] = cla;
-			apdu[1] = ins;
-			apdu[2] = p1;
-			apdu[3] = p2;
-			apdu[4] = (byte)(data.Length);
-			Array.Copy(data, 0, apdu, 5, data.Length);
-			return Exchange(apdu, out sw);
+			return ExchangeApdus(new byte[][] { CreateAPDU(cla, ins, p1, p2, data) }, acceptedSW);
 		}
 
-		protected byte[] ExchangeApdu(byte cla, byte ins, byte p1, byte p2, int length, int[] acceptedSW)
+		protected byte[] ExchangeSingleAPDU(byte cla, byte ins, byte p1, byte p2, byte[] data, out int lastSW)
+		{
+			return Exchange(new byte[][] { CreateAPDU(cla, ins, p1, p2, data) }, out lastSW);
+		}
+
+		protected byte[] ExchangeSingleAPDU(byte cla, byte ins, byte p1, byte p2, int length, int[] acceptedSW)
 		{
 			byte[] apdu = new byte[]
 			{
 				cla,ins,p1,p2,(byte)length
 			};
-			return ExchangeApdu(apdu, acceptedSW);
+			return ExchangeApdus(new byte[][] { apdu }, acceptedSW);
 		}
 
-		protected byte[] ExchangeApdu(byte[] apdu, int[] acceptedSW)
+		protected byte[] ExchangeApdus(byte[][] apdus, int[] acceptedSW)
 		{
 			int sw;
-			var resp = Exchange(apdu, out sw);
+			var resp = Exchange(apdus, out sw);
 			CheckSW(acceptedSW, sw);
 			return resp;
 		}
+		
 
-		protected byte[] Exchange(byte[] apdu, out int sw)
+		protected byte[] Exchange(byte[][] apdus, out int sw)
 		{
-			byte[] response = Transport.Exchange(apdu);
+			byte[] response = Transport.Exchange(apdus);
 			if(response.Length < 2)
 			{
 				throw new LedgerWalletException("Truncated response");
