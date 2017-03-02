@@ -175,7 +175,7 @@ namespace LedgerWallet
 				apdu[0] = LedgerWalletConstants.LedgerWallet_CLA;
 				apdu[1] = LedgerWalletConstants.LedgerWallet_INS_HASH_INPUT_FINALIZE_FULL;
 				apdu[2] = ((offset + blockLength) == data.Length ? (byte)0x80 : (byte)0x00);
-				apdu[3] = (byte)0x00;
+				apdu[3] = (byte)0x00;				
 				apdu[4] = (byte)(blockLength);
 				Array.Copy(data, offset, apdu, 5, blockLength);
 				apdus.Add(apdu);
@@ -209,18 +209,13 @@ namespace LedgerWallet
 		}
 		public async Task<Transaction> SignTransactionAsync(SignatureRequest[] signatureRequests, Transaction transaction, KeyPath changePath = null, bool verify = true)
 		{
-			List<Task<TrustedInput>> trustedInputs = new List<Task<TrustedInput>>();
-			Dictionary<uint256, Transaction> knownTransactions = signatureRequests
-				.Select(o => o.InputTransaction)
-				.ToDictionaryUnique(o => o.GetHash());
+			List<Task<TrustedInput>> trustedInputsAsync = new List<Task<TrustedInput>>();
 			Dictionary<OutPoint, SignatureRequest> requests = signatureRequests
 				.ToDictionaryUnique(o => o.InputCoin.Outpoint);
-			foreach(var input in transaction.Inputs)
+			Dictionary<OutPoint, IndexedTxIn> inputsByOutpoint = transaction.Inputs.AsIndexedInputs().ToDictionary(i => i.PrevOut);
+			foreach(var sigRequest in signatureRequests)
 			{
-				Transaction parent;
-				if(!knownTransactions.TryGetValue(input.PrevOut.Hash, out parent))
-					throw new KeyNotFoundException("Parent transaction " + input.PrevOut.Hash + " not found");
-				trustedInputs.Add(GetTrustedInputAsync(parent, (int)input.PrevOut.N));
+				trustedInputsAsync.Add(GetTrustedInputAsync(sigRequest.InputTransaction, (int)sigRequest.InputCoin.Outpoint.N));
 			}
 
 			var noPubKeyRequests = signatureRequests.Where(r => r.PubKey == null).ToArray();
@@ -230,29 +225,25 @@ namespace LedgerWallet
 				getPubKeys.Add(GetWalletPubKeyAsync(previousReq.KeyPath));
 			}
 			await Task.WhenAll(getPubKeys).ConfigureAwait(false);
-			await Task.WhenAll(trustedInputs).ConfigureAwait(false);
+			await Task.WhenAll(trustedInputsAsync).ConfigureAwait(false);
 
 			for(int i = 0; i < noPubKeyRequests.Length; i++)
 			{
 				noPubKeyRequests[i].PubKey = getPubKeys[i].Result.UncompressedPublicKey.Compress();
 			}
 
-			var inputs = trustedInputs.Select(t => t.Result).ToArray();
+			var trustedInputs = trustedInputsAsync.Select(t => t.Result).ToArray();
 			transaction = transaction.Clone();
-
 			List<byte[]> apdus = new List<byte[]>();
 			bool newTransaction = true;
-			foreach(var input in transaction.Inputs.AsIndexedInputs())
+			foreach(SignatureRequest sigRequest in signatureRequests)
 			{
-				SignatureRequest previousReq;
-				if(requests.TryGetValue(input.PrevOut, out previousReq))
-					input.ScriptSig = previousReq.InputCoin.GetScriptCode();
-
-				apdus.AddRange(UntrustedHashTransactionInputStart(newTransaction, input, inputs));
+				var input = inputsByOutpoint[sigRequest.InputCoin.Outpoint];
+				input.ScriptSig = sigRequest.InputCoin.GetScriptCode();
+				apdus.AddRange(UntrustedHashTransactionInputStart(newTransaction, input, trustedInputs));
 				newTransaction = false;
-
 				apdus.AddRange(UntrustedHashTransactionInputFinalizeFull(changePath, transaction.Outputs));
-				apdus.Add(UntrustedHashSign(previousReq.KeyPath, null, transaction.LockTime, SigHash.All));
+				apdus.Add(UntrustedHashSign(sigRequest.KeyPath, null, transaction.LockTime, SigHash.All));
 			}
 			var responses = await Exchange(apdus.ToArray()).ConfigureAwait(false);
 			foreach(var response in responses)
@@ -262,16 +253,16 @@ namespace LedgerWallet
 			if(signatureRequests.Length != signatures.Length)
 				throw new LedgerWalletException("failed to sign some inputs");
 			int sigIndex = 0;
-			foreach(var previousReq in signatureRequests)
+			foreach(var sigRequest in signatureRequests)
 			{
-				var input = transaction.Inputs.FirstOrDefault(o => o.PrevOut == previousReq.InputCoin.Outpoint);
+				var input = inputsByOutpoint[sigRequest.InputCoin.Outpoint];
 				if(input == null)
 					continue;
 				input.ScriptSig =
-				previousReq.PubKey.ScriptPubKey == previousReq.InputCoin.TxOut.ScriptPubKey ?
+				sigRequest.PubKey.ScriptPubKey == sigRequest.InputCoin.TxOut.ScriptPubKey ?
 					PayToPubkeyTemplate.Instance.GenerateScriptSig(signatures[sigIndex]) :
-				previousReq.PubKey.Hash.ScriptPubKey == previousReq.InputCoin.TxOut.ScriptPubKey ?
-				PayToPubkeyHashTemplate.Instance.GenerateScriptSig(signatures[sigIndex], previousReq.PubKey) : null;
+				sigRequest.PubKey.Hash.ScriptPubKey == sigRequest.InputCoin.TxOut.ScriptPubKey ?
+				PayToPubkeyHashTemplate.Instance.GenerateScriptSig(signatures[sigIndex], sigRequest.PubKey) : null;
 				if(input.ScriptSig == null)
 					throw new InvalidOperationException("Impossible to generate the scriptSig of this transaction");
 				sigIndex++;
@@ -279,8 +270,9 @@ namespace LedgerWallet
 
 			if(verify)
 			{
-				foreach(var input in transaction.Inputs.AsIndexedInputs())
+				foreach(var sigRequest in signatureRequests)
 				{
+					var input = inputsByOutpoint[sigRequest.InputCoin.Outpoint];
 					ScriptError error;
 					SignatureRequest previousReq;
 					if(!requests.TryGetValue(input.PrevOut, out previousReq))
