@@ -212,6 +212,7 @@ namespace LedgerWallet
 			List<Task<TrustedInput>> trustedInputsAsync = new List<Task<TrustedInput>>();
 			Dictionary<OutPoint, SignatureRequest> requests = signatureRequests
 				.ToDictionaryUnique(o => o.InputCoin.Outpoint);
+			transaction = transaction.Clone();
 			Dictionary<OutPoint, IndexedTxIn> inputsByOutpoint = transaction.Inputs.AsIndexedInputs().ToDictionary(i => i.PrevOut);
 			foreach(var sigRequest in signatureRequests)
 			{
@@ -233,7 +234,6 @@ namespace LedgerWallet
 			}
 
 			var trustedInputs = trustedInputsAsync.Select(t => t.Result).ToArray();
-			transaction = transaction.Clone();
 			List<byte[]> apdus = new List<byte[]>();
 			bool newTransaction = true;
 			foreach(SignatureRequest sigRequest in signatureRequests)
