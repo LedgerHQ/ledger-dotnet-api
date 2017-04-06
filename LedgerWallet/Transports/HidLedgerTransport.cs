@@ -92,10 +92,7 @@ namespace LedgerWallet.Transports
 			MemoryStream output = new MemoryStream();
 			MemoryStream input = new MemoryStream(data);
 			int position = (int)input.Position;
-			if(input.ReadByte() != ((DEFAULT_LEDGER_CHANNEL >> 8) & 0xff))
-				return null;
-			if(input.ReadByte() != (DEFAULT_LEDGER_CHANNEL & 0xff))
-				return null;
+			var channel = input.ReadBytes(2);
 			if(input.ReadByte() != TAG_APDU)
 				return null;
 			if(input.ReadByte() != ((sequenceIdx >> 8) & 0xff))
