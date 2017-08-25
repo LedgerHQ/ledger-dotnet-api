@@ -17,7 +17,7 @@ namespace LedgerWallet
             UncompressedPublicKey = new PubKey(ms.ReadBytes(len));
             len = ms.ReadByte();
             var addr = Encoding.ASCII.GetString(ms.ReadBytes(len));
-            Address = BitcoinAddress.GetFromBase58Data(addr);
+            Address = BitcoinAddress.Create(addr);
             ChainCode = ms.ReadBytes(32);
         }
         public PubKey UncompressedPublicKey
@@ -25,7 +25,7 @@ namespace LedgerWallet
             get;
             set;
         }
-        public Base58Data Address
+        public BitcoinAddress Address
         {
             get;
             set;

@@ -31,7 +31,6 @@ namespace LedgerWallet
 		}
 		public bool VerifyPin(UserPin pin, out int remaining)
 		{
-			int lastSW;
 			remaining = 3;
 			var response = ExchangeSingleAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_VERIFY_PIN, 0, 0, pin.ToBytes()).GetAwaiter().GetResult();
 			if(response.SW == LedgerWalletConstants.SW_OK)
