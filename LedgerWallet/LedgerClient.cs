@@ -109,38 +109,56 @@ namespace LedgerWallet
 			return new TrustedInput(response);
 		}
 
-		public void UntrustedHashTransactionInputStart(bool newTransaction, Transaction tx, int index, TrustedInput[] trustedInputs)
+		public enum InputStartType
 		{
-			UntrustedHashTransactionInputStart(newTransaction, tx.Inputs.AsIndexedInputs().Skip(index).First(), trustedInputs);
+			New = 0x00,
+			NewSegwit = 0x02,
+			Continue = 0x80
 		}
-		public byte[][] UntrustedHashTransactionInputStart(bool newTransaction, IndexedTxIn txIn, TrustedInput[] trustedInputs)
+
+		public byte[][] UntrustedHashTransactionInputStart(
+			InputStartType startType,
+			IndexedTxIn txIn,
+			Dictionary<OutPoint, TrustedInput> trustedInputs,
+			Dictionary<OutPoint, ICoin> coins,
+			bool segwitMode)
 		{
 			List<byte[]> apdus = new List<byte[]>();
-			trustedInputs = trustedInputs ?? new TrustedInput[0];
+			trustedInputs = trustedInputs ?? new Dictionary<OutPoint, TrustedInput>();
 			// Start building a fake transaction with the passed inputs
 			MemoryStream data = new MemoryStream();
 			BufferUtils.WriteBuffer(data, txIn.Transaction.Version);
 			VarintUtils.write(data, txIn.Transaction.Inputs.Count);
-			apdus.Add(CreateAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_HASH_INPUT_START, (byte)0x00, (newTransaction ? (byte)0x00 : (byte)0x80), data.ToArray()));
+			apdus.Add(CreateAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_HASH_INPUT_START, (byte)0x00, (byte)startType, data.ToArray()));
 			// Loop for each input
 			long currentIndex = 0;
 			foreach(var input in txIn.Transaction.Inputs)
 			{
-				var trustedInput = trustedInputs.FirstOrDefault(i => i.OutPoint == input.PrevOut);
-				byte[] script = (currentIndex == txIn.Index ? txIn.TxIn.ScriptSig.ToBytes() : new byte[0]);
+				byte[] script = (currentIndex == txIn.Index ? coins[input.PrevOut].GetScriptCode().ToBytes() : new byte[0]);
 				data = new MemoryStream();
-				if(trustedInput != null)
+
+				if(segwitMode)
 				{
-					data.WriteByte(0x01);
-					var b = trustedInput.ToBytes();
-					// untrusted inputs have constant length
-					data.WriteByte((byte)b.Length);
-					BufferUtils.WriteBuffer(data, b);
+					data.WriteByte(0x02);
+					BufferUtils.WriteBuffer(data, input.PrevOut);
+					BufferUtils.WriteBuffer(data, Utils.ToBytes((ulong)coins[input.PrevOut].TxOut.Value.Satoshi, true));
 				}
 				else
 				{
-					data.WriteByte(0x00);
-					BufferUtils.WriteBuffer(data, input.PrevOut);
+					var trustedInput = trustedInputs[input.PrevOut];
+					if(trustedInput != null)
+					{
+						data.WriteByte(0x01);
+						var b = trustedInput.ToBytes();
+						// untrusted inputs have constant length
+						data.WriteByte((byte)b.Length);
+						BufferUtils.WriteBuffer(data, b);
+					}
+					else
+					{
+						data.WriteByte(0x00);
+						BufferUtils.WriteBuffer(data, input.PrevOut);
+					}
 				}
 				VarintUtils.write(data, script.Length);
 				apdus.Add(CreateAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_HASH_INPUT_START, (byte)0x80, (byte)0x00, data.ToArray()));
@@ -175,7 +193,7 @@ namespace LedgerWallet
 				apdu[0] = LedgerWalletConstants.LedgerWallet_CLA;
 				apdu[1] = LedgerWalletConstants.LedgerWallet_INS_HASH_INPUT_FINALIZE_FULL;
 				apdu[2] = ((offset + blockLength) == data.Length ? (byte)0x80 : (byte)0x00);
-				apdu[3] = (byte)0x00;				
+				apdu[3] = (byte)0x00;
 				apdu[4] = (byte)(blockLength);
 				Array.Copy(data, offset, apdu, 5, blockLength);
 				apdus.Add(apdu);
@@ -203,20 +221,33 @@ namespace LedgerWallet
 			}
 			return SignTransactionAsync(requests.ToArray(), transaction, changePath: changePath);
 		}
-		public Transaction SignTransaction(SignatureRequest[] signatureRequests, Transaction transaction, KeyPath changePath = null, bool verify = true)
+		public Transaction SignTransaction(SignatureRequest[] signatureRequests, Transaction transaction, KeyPath changePath = null)
 		{
-			return SignTransactionAsync(signatureRequests, transaction, changePath, verify).GetAwaiter().GetResult();
+			return SignTransactionAsync(signatureRequests, transaction, changePath).GetAwaiter().GetResult();
 		}
-		public async Task<Transaction> SignTransactionAsync(SignatureRequest[] signatureRequests, Transaction transaction, KeyPath changePath = null, bool verify = true)
+		public async Task<Transaction> SignTransactionAsync(SignatureRequest[] signatureRequests, Transaction transaction, KeyPath changePath = null)
 		{
-			List<Task<TrustedInput>> trustedInputsAsync = new List<Task<TrustedInput>>();
+			if(signatureRequests.Length == 0)
+				throw new ArgumentException("No signatureRequests is passed", "signatureRequests");
+			var segwitCoins = signatureRequests.Where(s => s.InputCoin.GetHashVersion() == HashVersion.Witness).Count();
+			if(segwitCoins != signatureRequests.Count() && segwitCoins != 0)
+				throw new ArgumentException("Mixing segwit input with non segwit input is not supported", "signatureRequests");
+
+			var segwitMode = segwitCoins != 0;
+
 			Dictionary<OutPoint, SignatureRequest> requests = signatureRequests
 				.ToDictionaryUnique(o => o.InputCoin.Outpoint);
 			transaction = transaction.Clone();
 			Dictionary<OutPoint, IndexedTxIn> inputsByOutpoint = transaction.Inputs.AsIndexedInputs().ToDictionary(i => i.PrevOut);
-			foreach(var sigRequest in signatureRequests)
+			Dictionary<OutPoint, ICoin> coinsByOutpoint = requests.ToDictionary(o => o.Key, o => o.Value.InputCoin);
+
+			List<Task<TrustedInput>> trustedInputsAsync = new List<Task<TrustedInput>>();
+			if(!segwitMode)
 			{
-				trustedInputsAsync.Add(GetTrustedInputAsync(sigRequest.InputTransaction, (int)sigRequest.InputCoin.Outpoint.N));
+				foreach(var sigRequest in signatureRequests)
+				{
+					trustedInputsAsync.Add(GetTrustedInputAsync(sigRequest.InputTransaction, (int)sigRequest.InputCoin.Outpoint.N));
+				}
 			}
 
 			var noPubKeyRequests = signatureRequests.Where(r => r.PubKey == null).ToArray();
@@ -233,16 +264,27 @@ namespace LedgerWallet
 				noPubKeyRequests[i].PubKey = getPubKeys[i].Result.UncompressedPublicKey.Compress();
 			}
 
-			var trustedInputs = trustedInputsAsync.Select(t => t.Result).ToArray();
+			var trustedInputs = trustedInputsAsync.Select(t => t.Result).ToDictionaryUnique(i => i.OutPoint);
 			List<byte[]> apdus = new List<byte[]>();
-			bool newTransaction = true;
-			foreach(SignatureRequest sigRequest in signatureRequests)
+			InputStartType inputStartType = segwitMode ? InputStartType.NewSegwit : InputStartType.New;
+
+
+			bool firstPass = true;
+			for(int i = 0; i < signatureRequests.Length; i++)
 			{
+				var sigRequest = signatureRequests[i];
 				var input = inputsByOutpoint[sigRequest.InputCoin.Outpoint];
-				input.ScriptSig = sigRequest.InputCoin.GetScriptCode();
-				apdus.AddRange(UntrustedHashTransactionInputStart(newTransaction, input, trustedInputs));
-				newTransaction = false;
-				apdus.AddRange(UntrustedHashTransactionInputFinalizeFull(changePath, transaction.Outputs));
+				apdus.AddRange(UntrustedHashTransactionInputStart(inputStartType, input, trustedInputs, coinsByOutpoint, segwitMode));
+				inputStartType = InputStartType.Continue;
+				if(!segwitMode || firstPass)
+					apdus.AddRange(UntrustedHashTransactionInputFinalizeFull(changePath, transaction.Outputs));
+				changePath = null; //do not resubmit the changepath
+				if(segwitMode && firstPass)
+				{
+					firstPass = false;
+					i--; //pass once more
+					continue;
+				}
 				apdus.Add(UntrustedHashSign(sigRequest.KeyPath, null, transaction.LockTime, SigHash.All));
 			}
 			var responses = await Exchange(apdus.ToArray()).ConfigureAwait(false);
@@ -250,37 +292,39 @@ namespace LedgerWallet
 				if(response.Response.Length > 10) //Probably a signature
 					response.Response[0] = 0x30;
 			var signatures = responses.Where(p => TransactionSignature.IsValid(p.Response)).Select(p => new TransactionSignature(p.Response)).ToArray();
+
 			if(signatureRequests.Length != signatures.Length)
 				throw new LedgerWalletException("failed to sign some inputs");
 			int sigIndex = 0;
+
+			TransactionBuilder builder = new TransactionBuilder();
 			foreach(var sigRequest in signatureRequests)
 			{
 				var input = inputsByOutpoint[sigRequest.InputCoin.Outpoint];
 				if(input == null)
 					continue;
-				input.ScriptSig =
-				sigRequest.PubKey.ScriptPubKey == sigRequest.InputCoin.TxOut.ScriptPubKey ?
-					PayToPubkeyTemplate.Instance.GenerateScriptSig(signatures[sigIndex]) :
-				sigRequest.PubKey.Hash.ScriptPubKey == sigRequest.InputCoin.TxOut.ScriptPubKey ?
-				PayToPubkeyHashTemplate.Instance.GenerateScriptSig(signatures[sigIndex], sigRequest.PubKey) : null;
-				if(input.ScriptSig == null)
-					throw new InvalidOperationException("Impossible to generate the scriptSig of this transaction");
+				builder.AddCoins(sigRequest.InputCoin);
+				builder.AddKnownSignature(sigRequest.PubKey, signatures[sigIndex]);
+				sigIndex++;
+			}
+			builder.SignTransactionInPlace(transaction);
+
+			sigIndex = 0;
+			foreach(var sigRequest in signatureRequests)
+			{
+				var input = inputsByOutpoint[sigRequest.InputCoin.Outpoint];
+				if(input == null)
+					continue;
+				sigRequest.Signature = signatures[sigIndex];
+				if(!sigRequest.PubKey.Verify(transaction.GetSignatureHash(sigRequest.InputCoin, sigRequest.Signature.SigHash), sigRequest.Signature.Signature))
+				{
+					foreach(var sigRequest2 in signatureRequests)
+						sigRequest2.Signature = null;
+					return null;
+				}
 				sigIndex++;
 			}
 
-			if(verify)
-			{
-				foreach(var sigRequest in signatureRequests)
-				{
-					var input = inputsByOutpoint[sigRequest.InputCoin.Outpoint];
-					ScriptError error;
-					SignatureRequest previousReq;
-					if(!requests.TryGetValue(input.PrevOut, out previousReq))
-						continue;
-					if(!Script.VerifyScript(previousReq.InputCoin.TxOut.ScriptPubKey, input.Transaction, (int)input.Index, previousReq.InputCoin.TxOut.Value, out error))
-						return null;
-				}
-			}
 			return transaction;
 		}
 

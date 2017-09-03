@@ -25,5 +25,10 @@ namespace LedgerWallet
 		{
 			get; set;
 		}
+		public TransactionSignature Signature
+		{
+			get;
+			set;
+		}
 	}
 }

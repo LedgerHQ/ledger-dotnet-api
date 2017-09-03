@@ -64,10 +64,16 @@ namespace LedgerWallet.Tests
 		[Trait("Manual", "Manual")]
 		public void CanSignTransactionStandardMode()
 		{
+			CanSignTransactionStandardModeCore(true);
+			//CanSignTransactionStandardModeCore(false);
+		}
+		
+		public void CanSignTransactionStandardModeCore(bool segwit)
+		{
 			var ledger = GetLedger();
 
 			var walletPubKey = ledger.GetWalletPubKey(new KeyPath("1'/0"));
-			var address = (BitcoinAddress)walletPubKey.Address;
+			var address = segwit ? walletPubKey.UncompressedPublicKey.Compress().WitHash.ScriptPubKey : walletPubKey.Address.ScriptPubKey;
 
 			var changeAddress = (BitcoinAddress)ledger.GetWalletPubKey(new KeyPath("1'/1")).Address;
 
@@ -109,8 +115,14 @@ namespace LedgerWallet.Tests
 				},
 			};
 
+			if(segwit)
+			{
+				foreach(var req in requests)
+					req.InputTransaction = null;
+			}
+
 			//should show 0.5 and 2.0 btc in fee
-			var signed = ledger.SignTransaction(requests, spending, new KeyPath("1'/1"), true);
+			var signed = ledger.SignTransaction(requests, spending, new KeyPath("1'/1"));
 			//Assert.Equal(Script.Empty, spending.Inputs.Last().ScriptSig);
 			Assert.NotNull(signed);
 		}
