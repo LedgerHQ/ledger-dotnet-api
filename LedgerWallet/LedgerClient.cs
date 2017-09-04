@@ -121,22 +121,34 @@ namespace LedgerWallet
 			IndexedTxIn txIn,
 			Dictionary<OutPoint, TrustedInput> trustedInputs,
 			Dictionary<OutPoint, ICoin> coins,
-			bool segwitMode)
+			bool segwitMode, bool segwitParsedOnce)
 		{
 			List<byte[]> apdus = new List<byte[]>();
 			trustedInputs = trustedInputs ?? new Dictionary<OutPoint, TrustedInput>();
 			// Start building a fake transaction with the passed inputs
 			MemoryStream data = new MemoryStream();
 			BufferUtils.WriteBuffer(data, txIn.Transaction.Version);
-			VarintUtils.write(data, txIn.Transaction.Inputs.Count);
+
+			if(segwitMode && segwitParsedOnce)
+				VarintUtils.write(data, 1);
+			else
+				VarintUtils.write(data, txIn.Transaction.Inputs.Count);
+
 			apdus.Add(CreateAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_HASH_INPUT_START, (byte)0x00, (byte)startType, data.ToArray()));
 			// Loop for each input
 			long currentIndex = 0;
 			foreach(var input in txIn.Transaction.Inputs)
 			{
-				byte[] script = (currentIndex == txIn.Index ? coins[input.PrevOut].GetScriptCode().ToBytes() : new byte[0]);
-				data = new MemoryStream();
+				if(segwitMode && segwitParsedOnce && currentIndex != txIn.Index)
+				{
+					currentIndex++;
+					continue;
+				}
+				byte[] script = new byte[0];
+				if(currentIndex == txIn.Index || segwitMode && !segwitParsedOnce)
+					script = coins[input.PrevOut].GetScriptCode().ToBytes();
 
+				data = new MemoryStream();
 				if(segwitMode)
 				{
 					data.WriteByte(0x02);
@@ -269,19 +281,19 @@ namespace LedgerWallet
 			InputStartType inputStartType = segwitMode ? InputStartType.NewSegwit : InputStartType.New;
 
 
-			bool firstPass = true;
+			bool segwitParsedOnce = false;
 			for(int i = 0; i < signatureRequests.Length; i++)
 			{
 				var sigRequest = signatureRequests[i];
 				var input = inputsByOutpoint[sigRequest.InputCoin.Outpoint];
-				apdus.AddRange(UntrustedHashTransactionInputStart(inputStartType, input, trustedInputs, coinsByOutpoint, segwitMode));
+				apdus.AddRange(UntrustedHashTransactionInputStart(inputStartType, input, trustedInputs, coinsByOutpoint, segwitMode, segwitParsedOnce));
 				inputStartType = InputStartType.Continue;
-				if(!segwitMode || firstPass)
+				if(!segwitMode || !segwitParsedOnce)
 					apdus.AddRange(UntrustedHashTransactionInputFinalizeFull(changePath, transaction.Outputs));
 				changePath = null; //do not resubmit the changepath
-				if(segwitMode && firstPass)
+				if(segwitMode && !segwitParsedOnce)
 				{
-					firstPass = false;
+					segwitParsedOnce = true;
 					i--; //pass once more
 					continue;
 				}

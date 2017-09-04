@@ -65,7 +65,7 @@ namespace LedgerWallet.Tests
 		public void CanSignTransactionStandardMode()
 		{
 			CanSignTransactionStandardModeCore(true);
-			//CanSignTransactionStandardModeCore(false);
+			CanSignTransactionStandardModeCore(false);
 		}
 		
 		public void CanSignTransactionStandardModeCore(bool segwit)
@@ -87,7 +87,8 @@ namespace LedgerWallet.Tests
 
 			var spending = new Transaction();
 			spending.LockTime = 1;
-			spending.Inputs.AddRange(coins.Select(o => new TxIn(o.Outpoint, o.ScriptPubKey)));
+			spending.Inputs.AddRange(coins.Select(o => new TxIn(o.Outpoint, Script.Empty)));
+			spending.Inputs[0].Sequence = 1;
 			//spending.Inputs.Add(new TxIn(new OutPoint(uint256.Zero, 0), Script.Empty));
 			spending.Outputs.Add(new TxOut(Money.Coins(0.5m), BitcoinAddress.Create("15sYbVpRh6dyWycZMwPdxJWD4xbfxReeHe")));
 			spending.Outputs.Add(new TxOut(Money.Coins(0.8m), changeAddress));
