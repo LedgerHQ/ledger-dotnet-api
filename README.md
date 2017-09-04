@@ -2,7 +2,7 @@
 
 <img src="http://segwit.co/static/public/images/logo.png" width="100"> [![NuGet](https://img.shields.io/nuget/v/NBitcoin.svg)](https://www.nuget.org/packages/LedgerWallet/)
 
-The is a .NET library to use build application using the ledger Nano S.
+The is a .NET library to build application relying on the ledger Nano S.
 
 * Use the `LedgerClient` class for the Ledger Bitcoin App.
 * Use the `U2FClient` class for the U2F Ledger App.
