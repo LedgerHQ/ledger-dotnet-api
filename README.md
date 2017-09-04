@@ -68,11 +68,10 @@ var requests = new SignatureRequest[]{
 
 //should show 0.5 and 2.0 btc in fee
 var signed = ledger.SignTransaction(requests, spending, new KeyPath("1'/1"));
-//Assert.Equal(Script.Empty, spending.Inputs.Last().ScriptSig);
-Assert.NotNull(signed);
+Console.WriteLine(signed);
 foreach(var req in requests)
 {
-    Assert.NotNull(req.Signature);
+    Console.WriteLine(req.Signature);
 }
 ```
 
