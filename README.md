@@ -40,7 +40,6 @@ var spending = new Transaction();
 spending.LockTime = 1;
 spending.Inputs.AddRange(coins.Select(o => new TxIn(o.Outpoint, Script.Empty)));
 spending.Inputs[0].Sequence = 1;
-//spending.Inputs.Add(new TxIn(new OutPoint(uint256.Zero, 0), Script.Empty));
 spending.Outputs.Add(new TxOut(Money.Coins(0.5m), BitcoinAddress.Create("15sYbVpRh6dyWycZMwPdxJWD4xbfxReeHe")));
 spending.Outputs.Add(new TxOut(Money.Coins(0.8m), changeAddress));
 spending.Outputs.Add(new TxOut(Money.Zero, TxNullDataTemplate.Instance.GenerateScriptPubKey(new byte[] { 1, 2 })));
