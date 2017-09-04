@@ -12,7 +12,7 @@ The is a .NET library to use build application using the ledger Nano S.
 
 Support only Windows for the time being. Supporting other plateform is theorically possible if you can compile hidapi library by yourself.
 
-#How to use ?
+## How to use ?
 
 Reference the [nuget package](https://www.nuget.org/packages/LedgerWallet/) in your project.
 
