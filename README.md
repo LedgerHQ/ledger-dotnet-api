@@ -14,7 +14,9 @@ Support only Windows for the time being. Supporting other plateform is theorical
 
 ## How to use ?
 
-Reference the [nuget package](https://www.nuget.org/packages/LedgerWallet/) in your project.
+1. Reference the [nuget package](https://www.nuget.org/packages/LedgerWallet/) in your project.
+2. Plug your ledger
+3. Open Bitcoin app
 
 Then you can easily sign:
 
