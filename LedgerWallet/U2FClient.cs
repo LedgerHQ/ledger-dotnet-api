@@ -221,6 +221,7 @@ namespace LedgerWallet.U2F
 			var data = new byte[64];
 			Array.Copy(challenge, 0, data, 0, 32);
 			Array.Copy(applicationId.GetBytes(true), 0, data, 32, 32);
+
 			var result = await this.ExchangeApdu(INS_ENROLL, 0x03, 0x00, data, cancellationToken).ConfigureAwait(false);
 			return new U2FRegistrationResponse(result);
 		}
@@ -247,7 +248,7 @@ namespace LedgerWallet.U2F
 			return new U2FAuthenticationResponse(result);
 		}
 
-		private Task<byte[]> ExchangeApdu(byte ins, byte p1, byte p2, byte[] data, CancellationToken cancellationToken)
+		private async Task<byte[]> ExchangeApdu(byte ins, byte p1, byte p2, byte[] data, CancellationToken cancellationToken)
 		{
 			while(true)
 			{
@@ -265,7 +266,7 @@ namespace LedgerWallet.U2F
 					apduStream.Write(data, 0, data.Length);
 					apduStream.WriteByte(0x04);
 					apduStream.WriteByte(0);
-					return ExchangeApdus(new byte[][] { apduStream.ToArray() }, OK);
+					return await ExchangeApdus(new byte[][] { apduStream.ToArray() }, OK).ConfigureAwait(false);
 				}
 				catch(LedgerWalletException ex)
 				{

@@ -157,3 +157,4 @@ $RECYCLE.BIN/
 *.nupkg
 /.vs/LedgerWallet/v15/sqlite3
 /.vs/ledger-dotnet-api/v15/sqlite3
+/.vs/

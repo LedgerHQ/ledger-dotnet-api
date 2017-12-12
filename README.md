@@ -1,6 +1,6 @@
 # Ledger Wallet Client API
 
-<img src="http://segwit.co/static/public/images/logo.png" width="100"> [![NuGet](https://img.shields.io/nuget/v/NBitcoin.svg)](https://www.nuget.org/packages/LedgerWallet/)
+<img src="http://segwit.co/static/public/images/logo.png" width="100"> [![NuGet](https://img.shields.io/nuget/v/LedgerWallet.svg)](https://www.nuget.org/packages/LedgerWallet/)
 
 The is a .NET library to build application relying on the ledger Nano S.
 
