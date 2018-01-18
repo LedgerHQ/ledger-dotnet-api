@@ -58,10 +58,7 @@ namespace LedgerWallet
 
 		public async Task<GetWalletPubKeyResponse> GetWalletMasterKeyAsync()
 		{
-			var keyPath = new KeyPath("0'");
-			byte[] bytes = Serializer.Serialize(keyPath);
-			byte[] response = await ExchangeSingleAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_WALLET_PUBLIC_KEY, (byte)0x00, (byte)0x00, bytes, OK).ConfigureAwait(false);
-			return new GetWalletPubKeyResponse(response);
+			return await GetWalletPubKeyAsync(new KeyPath("0'"));
 		}
 
 		public GetWalletHDKeyResponse GetWalletHDKey(KeyPath keyPath)
