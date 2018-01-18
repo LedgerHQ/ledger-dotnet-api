@@ -11,6 +11,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace LedgerWallet
@@ -60,35 +61,22 @@ namespace LedgerWallet
 		{
 			return await GetWalletPubKeyAsync(new KeyPath("0'"));
 		}
-
-		public GetWalletHDKeyResponse GetWalletHDKey(KeyPath keyPath)
-		{
-			return GetWalletHDKeyAsync(keyPath).GetAwaiter().GetResult();
-		}
-
-		/// <remarks>Note that if you're attempting to retrieve the xpub key for an account on your ledger, you need to pass the BIP 44 root path of the account, not the master key.</remarks>
-		public async Task<GetWalletHDKeyResponse> GetWalletHDKeyAsync(KeyPath keyPath)
-		{
-			Guard.AssertKeyPath(keyPath);
-			byte[] bytes = Serializer.Serialize(keyPath);
-			byte[] response = await ExchangeSingleAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_WALLET_PUBLIC_KEY, (byte)0x00, (byte)0x00, bytes, OK).ConfigureAwait(false);
-			return new GetWalletHDKeyResponse(response);
-		}
-
+		
 		public KeyPath GetWalletHDKeyPathForSegwitAddress(KeyPath rootKeyPath, string segwitAddress, Network network, int startAtIndex = 0, int maxAttempts = 100)
 		{
 			return GetWalletHDKeyPathForSegwitAddressAsync(rootKeyPath, segwitAddress, network, startAtIndex, maxAttempts).GetAwaiter().GetResult();
 		}
 
-		public async Task<KeyPath> GetWalletHDKeyPathForSegwitAddressAsync(KeyPath rootKeyPath, string segwitAddress, Network network, int startAtIndex = 0, int maxAttempts = 100)
+		public async Task<KeyPath> GetWalletHDKeyPathForSegwitAddressAsync(KeyPath rootKeyPath, string segwitAddress, Network network, int startAtIndex = 0, int? maxAttempts = null, CancellationToken? cancellationToken = null)
 		{
 			Guard.AssertKeyPath(rootKeyPath);
 
-			GetWalletHDKeyResponse response = await GetWalletHDKeyAsync(rootKeyPath);
+			GetWalletPubKeyResponse response = await GetWalletPubKeyAsync(rootKeyPath);
 			ExtPubKey hdKey = response.ExtendedPublicKey;
 
 			var i = startAtIndex;
-			var a = 0;
+			var a = 0L;
+
 			while (true)
 			{
 				var keyPath = new KeyPath($"0/{i}");
@@ -102,7 +90,7 @@ namespace LedgerWallet
 				i++;
 				a++;
 
-				if (a > maxAttempts)
+				if (a > maxAttempts || (cancellationToken?.IsCancellationRequested).GetValueOrDefault())
 				{
 					return null;
 				}
