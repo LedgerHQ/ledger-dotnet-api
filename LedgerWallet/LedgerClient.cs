@@ -51,6 +51,67 @@ namespace LedgerWallet
 			return new GetWalletPubKeyResponse(response);
 		}
 
+		public GetWalletPubKeyResponse GetWalletMasterKey()
+		{
+			return GetWalletMasterKeyAsync().GetAwaiter().GetResult();
+		}
+
+		public async Task<GetWalletPubKeyResponse> GetWalletMasterKeyAsync()
+		{
+			var keyPath = new KeyPath("0'");
+			byte[] bytes = Serializer.Serialize(keyPath);
+			byte[] response = await ExchangeSingleAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_WALLET_PUBLIC_KEY, (byte)0x00, (byte)0x00, bytes, OK).ConfigureAwait(false);
+			return new GetWalletPubKeyResponse(response);
+		}
+
+		public GetWalletHDKeyResponse GetWalletHDKey(KeyPath keyPath)
+		{
+			return GetWalletHDKeyAsync(keyPath).GetAwaiter().GetResult();
+		}
+
+		/// <remarks>Note that if you're attempting to retrieve the xpub key for an account on your ledger, you need to pass the BIP 44 root path of the account, not the master key.</remarks>
+		public async Task<GetWalletHDKeyResponse> GetWalletHDKeyAsync(KeyPath keyPath)
+		{
+			Guard.AssertKeyPath(keyPath);
+			byte[] bytes = Serializer.Serialize(keyPath);
+			byte[] response = await ExchangeSingleAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_WALLET_PUBLIC_KEY, (byte)0x00, (byte)0x00, bytes, OK).ConfigureAwait(false);
+			return new GetWalletHDKeyResponse(response);
+		}
+
+		public KeyPath GetWalletHDKeyPathForSegwitAddress(KeyPath rootKeyPath, string segwitAddress, Network network, int startAtIndex = 0, int maxAttempts = 100)
+		{
+			return GetWalletHDKeyPathForSegwitAddressAsync(rootKeyPath, segwitAddress, network, startAtIndex, maxAttempts).GetAwaiter().GetResult();
+		}
+
+		public async Task<KeyPath> GetWalletHDKeyPathForSegwitAddressAsync(KeyPath rootKeyPath, string segwitAddress, Network network, int startAtIndex = 0, int maxAttempts = 100)
+		{
+			Guard.AssertKeyPath(rootKeyPath);
+
+			GetWalletHDKeyResponse response = await GetWalletHDKeyAsync(rootKeyPath);
+			ExtPubKey hdKey = response.ExtendedPublicKey;
+
+			var i = startAtIndex;
+			var a = 0;
+			while (true)
+			{
+				var keyPath = new KeyPath($"0/{i}");
+
+				var segwit = $"{hdKey.Derive(keyPath).PubKey.WitHash.ScriptPubKey.Hash.GetAddress(Network.Main)}";
+				if (segwit == segwitAddress)
+				{
+					return keyPath;
+				}
+
+				i++;
+				a++;
+
+				if (a > maxAttempts)
+				{
+					return null;
+				}
+			}
+		}
+
 		public Task<TrustedInput> GetTrustedInputAsync(IndexedTxOut txout)
 		{
 			return GetTrustedInputAsync(txout.Transaction, (int)txout.N);
