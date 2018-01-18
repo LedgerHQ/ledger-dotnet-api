@@ -67,7 +67,7 @@ namespace LedgerWallet
 			return GetWalletHDKeyPathForSegwitAddressAsync(rootKeyPath, segwitAddress, network, startAtIndex, maxAttempts).GetAwaiter().GetResult();
 		}
 
-		public async Task<KeyPath> GetWalletHDKeyPathForSegwitAddressAsync(KeyPath rootKeyPath, string segwitAddress, Network network, int startAtIndex = 0, int? maxAttempts = null, CancellationToken? cancellationToken = null)
+		public async Task<KeyPath> GetWalletHDKeyPathForSegwitAddressAsync(KeyPath rootKeyPath, string segwitAddress, Network network, int startAtIndex = 0, int? maxAttempts = null, CancellationToken cancellationToken = default(CancellationToken))
 		{
 			Guard.AssertKeyPath(rootKeyPath);
 
@@ -79,6 +79,8 @@ namespace LedgerWallet
 
 			while (true)
 			{
+				cancellationToken.ThrowIfCancellationRequested();
+
 				var keyPath = new KeyPath($"0/{i}");
 
 				var segwit = $"{hdKey.Derive(keyPath).PubKey.WitHash.ScriptPubKey.Hash.GetAddress(network)}";
@@ -89,8 +91,8 @@ namespace LedgerWallet
 
 				i++;
 				a++;
-
-				if (a > maxAttempts || (cancellationToken?.IsCancellationRequested).GetValueOrDefault())
+				
+				if (a > maxAttempts)
 				{
 					return null;
 				}
