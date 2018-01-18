@@ -11,6 +11,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace LedgerWallet
@@ -49,6 +50,53 @@ namespace LedgerWallet
 			//bytes[0] = 10;
 			byte[] response = await ExchangeSingleAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_WALLET_PUBLIC_KEY, (byte)0x00, (byte)0x00, bytes, OK).ConfigureAwait(false);
 			return new GetWalletPubKeyResponse(response);
+		}
+
+		public GetWalletPubKeyResponse GetWalletMasterKey()
+		{
+			return GetWalletMasterKeyAsync().GetAwaiter().GetResult();
+		}
+
+		public async Task<GetWalletPubKeyResponse> GetWalletMasterKeyAsync()
+		{
+			return await GetWalletPubKeyAsync(new KeyPath("0'"));
+		}
+		
+		public KeyPath GetWalletHDKeyPathForSegwitAddress(KeyPath rootKeyPath, string segwitAddress, Network network, int startAtIndex = 0, int maxAttempts = 100)
+		{
+			return GetWalletHDKeyPathForSegwitAddressAsync(rootKeyPath, segwitAddress, network, startAtIndex, maxAttempts).GetAwaiter().GetResult();
+		}
+
+		public async Task<KeyPath> GetWalletHDKeyPathForSegwitAddressAsync(KeyPath rootKeyPath, string segwitAddress, Network network, int startAtIndex = 0, int? maxAttempts = null, CancellationToken cancellationToken = default(CancellationToken))
+		{
+			Guard.AssertKeyPath(rootKeyPath);
+
+			GetWalletPubKeyResponse response = await GetWalletPubKeyAsync(rootKeyPath);
+			ExtPubKey hdKey = response.ExtendedPublicKey;
+
+			var i = startAtIndex;
+			var a = 0L;
+
+			while (true)
+			{
+				cancellationToken.ThrowIfCancellationRequested();
+
+				var keyPath = new KeyPath($"0/{i}");
+
+				var segwit = $"{hdKey.Derive(keyPath).PubKey.WitHash.ScriptPubKey.Hash.GetAddress(network)}";
+				if (segwit == segwitAddress)
+				{
+					return keyPath;
+				}
+
+				i++;
+				a++;
+				
+				if (a > maxAttempts)
+				{
+					return null;
+				}
+			}
 		}
 
 		public Task<TrustedInput> GetTrustedInputAsync(IndexedTxOut txout)
