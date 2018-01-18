@@ -96,7 +96,7 @@ namespace LedgerWallet
 			{
 				var keyPath = new KeyPath($"0/{i}");
 
-				var segwit = $"{hdKey.Derive(keyPath).PubKey.WitHash.ScriptPubKey.Hash.GetAddress(Network.Main)}";
+				var segwit = $"{hdKey.Derive(keyPath).PubKey.WitHash.ScriptPubKey.Hash.GetAddress(network)}";
 				if (segwit == segwitAddress)
 				{
 					return keyPath;
