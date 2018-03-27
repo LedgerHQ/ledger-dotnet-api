@@ -42,13 +42,35 @@ namespace LedgerWallet
 		{
 			return GetWalletPubKeyAsync(keyPath).GetAwaiter().GetResult();
 		}
+		public GetWalletPubKeyResponse GetWalletPubKey(KeyPath keyPath, DisplayMode displayMode)
+		{
+			return GetWalletPubKeyAsync(keyPath, displayMode).GetAwaiter().GetResult();
+		}
 
-		public async Task<GetWalletPubKeyResponse> GetWalletPubKeyAsync(KeyPath keyPath)
+		public enum DisplayMode
+		{
+			NoDisplay,
+			Legacy,
+			P2SHSegwit,
+			NativeSegwit
+		}
+		public Task<GetWalletPubKeyResponse> GetWalletPubKeyAsync(KeyPath keyPath)
+		{
+			return GetWalletPubKeyAsync(keyPath, DisplayMode.NoDisplay);
+		}
+		public async Task<GetWalletPubKeyResponse> GetWalletPubKeyAsync(KeyPath keyPath, DisplayMode displayMode)
 		{
 			Guard.AssertKeyPath(keyPath);
 			byte[] bytes = Serializer.Serialize(keyPath);
 			//bytes[0] = 10;
-			byte[] response = await ExchangeSingleAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_WALLET_PUBLIC_KEY, (byte)0x00, (byte)0x00, bytes, OK).ConfigureAwait(false);
+			byte[] response = await ExchangeSingleAPDU(
+				LedgerWalletConstants.LedgerWallet_CLA,
+				LedgerWalletConstants.LedgerWallet_INS_GET_WALLET_PUBLIC_KEY,
+				(byte)(displayMode == DisplayMode.NoDisplay ? 0 : 1),
+				(byte)(displayMode == DisplayMode.NoDisplay ? 0 :
+					   displayMode == DisplayMode.NativeSegwit ? 0x02 :
+					   displayMode == DisplayMode.P2SHSegwit ? 0x01 :
+					   0x00), bytes, OK).ConfigureAwait(false);
 			return new GetWalletPubKeyResponse(response);
 		}
 
@@ -61,7 +83,7 @@ namespace LedgerWallet
 		{
 			return await GetWalletPubKeyAsync(new KeyPath("0'"));
 		}
-		
+
 		public KeyPath GetWalletHDKeyPathForSegwitAddress(KeyPath rootKeyPath, string segwitAddress, Network network, int startAtIndex = 0, int maxAttempts = 100)
 		{
 			return GetWalletHDKeyPathForSegwitAddressAsync(rootKeyPath, segwitAddress, network, startAtIndex, maxAttempts).GetAwaiter().GetResult();
@@ -77,22 +99,22 @@ namespace LedgerWallet
 			var i = startAtIndex;
 			var a = 0L;
 
-			while (true)
+			while(true)
 			{
 				cancellationToken.ThrowIfCancellationRequested();
 
 				var keyPath = new KeyPath($"0/{i}");
 
 				var segwit = $"{hdKey.Derive(keyPath).PubKey.WitHash.ScriptPubKey.Hash.GetAddress(network)}";
-				if (segwit == segwitAddress)
+				if(segwit == segwitAddress)
 				{
 					return keyPath;
 				}
 
 				i++;
 				a++;
-				
-				if (a > maxAttempts)
+
+				if(a > maxAttempts)
 				{
 					return null;
 				}

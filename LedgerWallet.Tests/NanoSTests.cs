@@ -1,4 +1,5 @@
-﻿using NBitcoin;
+﻿using LedgerWallet.Transports;
+using NBitcoin;
 using NBitcoin.DataEncoders;
 using System;
 using System.Collections.Generic;
@@ -67,7 +68,20 @@ namespace LedgerWallet.Tests
 			CanSignTransactionStandardModeCore(true);
 			CanSignTransactionStandardModeCore(false);
 		}
-		
+
+		[Fact]
+		[Trait("Manual", "Manual")]
+		public void CanGetWalletPubKey()
+		{
+			var ledger = GetLedger();
+			ledger.GetFirmwareVersion();
+			var path = new KeyPath("1'/0");
+			ledger.GetWalletPubKey(path, LedgerClient.DisplayMode.Legacy);
+			ledger.GetWalletPubKey(path, LedgerClient.DisplayMode.NativeSegwit);
+			ledger.GetWalletPubKey(path, LedgerClient.DisplayMode.NoDisplay);
+			ledger.GetWalletPubKey(path, LedgerClient.DisplayMode.P2SHSegwit);
+		}
+
 		public void CanSignTransactionStandardModeCore(bool segwit)
 		{
 			var ledger = GetLedger();
@@ -173,8 +187,11 @@ namespace LedgerWallet.Tests
 
 		private static LedgerClient GetLedger()
 		{
-			var ledger = LedgerClient.GetHIDLedgers().First();
-			return ledger;
+			//var ledger = LedgerClient.GetHIDLedgers().First();
+			//return ledger;
+			return HIDU2FTransport.GetHIDTransports()
+				.Select(c => new LedgerClient(c))
+				.First();
 		}
 	}
 }

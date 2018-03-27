@@ -121,6 +121,8 @@ namespace LedgerWallet.Transports
 					do
 					{
 						response = Read();
+						if(response == null)
+							throw new LedgerWalletException("Error while transmission");
 						Array.Copy(response, 0, readenNonce, 0, nonce.Length);
 					} while(!readenNonce.SequenceEqual(nonce));
 					Array.Copy(response, 8, cid, 0, cid.Length);
