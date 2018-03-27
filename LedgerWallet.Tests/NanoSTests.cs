@@ -187,11 +187,7 @@ namespace LedgerWallet.Tests
 
 		private static LedgerClient GetLedger()
 		{
-			//var ledger = LedgerClient.GetHIDLedgers().First();
-			//return ledger;
-			return HIDU2FTransport.GetHIDTransports()
-				.Select(c => new LedgerClient(c))
-				.First();
+			return LedgerClient.GetHIDLedgers().First();
 		}
 	}
 }
