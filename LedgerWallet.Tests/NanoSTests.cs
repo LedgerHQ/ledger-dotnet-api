@@ -76,10 +76,9 @@ namespace LedgerWallet.Tests
 			var ledger = GetLedger();
 			ledger.GetFirmwareVersion();
 			var path = new KeyPath("1'/0");
-			ledger.GetWalletPubKey(path, LedgerClient.DisplayMode.Legacy);
-			ledger.GetWalletPubKey(path, LedgerClient.DisplayMode.NativeSegwit);
-			ledger.GetWalletPubKey(path, LedgerClient.DisplayMode.NoDisplay);
-			ledger.GetWalletPubKey(path, LedgerClient.DisplayMode.P2SHSegwit);
+			ledger.GetWalletPubKey(path, LedgerClient.AddressType.Legacy, false);
+			ledger.GetWalletPubKey(path, LedgerClient.AddressType.NativeSegwit, false);
+			ledger.GetWalletPubKey(path, LedgerClient.AddressType.Segwit, false);
 		}
 
 		public void CanSignTransactionStandardModeCore(bool segwit)
