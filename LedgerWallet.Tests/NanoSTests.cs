@@ -76,7 +76,7 @@ namespace LedgerWallet.Tests
 			var ledger = GetLedger();
 			ledger.GetFirmwareVersion();
 			var path = new KeyPath("1'/0");
-			ledger.GetWalletPubKey(path, LedgerClient.AddressType.Legacy, false);
+			ledger.GetWalletPubKey(path, LedgerClient.AddressType.Legacy, true);
 			ledger.GetWalletPubKey(path, LedgerClient.AddressType.NativeSegwit, false);
 			ledger.GetWalletPubKey(path, LedgerClient.AddressType.Segwit, false);
 		}
