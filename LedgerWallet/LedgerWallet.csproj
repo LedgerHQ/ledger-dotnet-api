@@ -1,12 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFrameworks>netstandard2.0;net452</TargetFrameworks>
-	  <Version>1.0.1.35</Version>
+	  <Version>1.0.1.36</Version>
 	  <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="hidlibrary" Version="3.2.46.0" />
-    <PackageReference Include="NBitcoin" Version="4.1.0.11" />
+    <PackageReference Include="NBitcoin" Version="4.1.1.2" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Properties\" />

@@ -84,11 +84,10 @@ namespace LedgerWallet.Tests
 		public void CanSignTransactionStandardModeCore(bool segwit)
 		{
 			var ledger = GetLedger();
-
 			var walletPubKey = ledger.GetWalletPubKey(new KeyPath("1'/0"));
-			var address = segwit ? walletPubKey.UncompressedPublicKey.Compress().WitHash.ScriptPubKey : walletPubKey.Address.ScriptPubKey;
+			var address = segwit ? walletPubKey.UncompressedPublicKey.Compress().WitHash.ScriptPubKey : walletPubKey.GetAddress(network).ScriptPubKey;
 
-			var changeAddress = (BitcoinAddress)ledger.GetWalletPubKey(new KeyPath("1'/1")).Address;
+			var changeAddress = ledger.GetWalletPubKey(new KeyPath("1'/1")).GetAddress(network);
 
 			Transaction funding = new Transaction();
 			funding.AddInput(Network.Main.GetGenesis().Transactions[0].Inputs[0]);
@@ -103,7 +102,7 @@ namespace LedgerWallet.Tests
 			spending.Inputs.AddRange(coins.Select(o => new TxIn(o.Outpoint, Script.Empty)));
 			spending.Inputs[0].Sequence = 1;
 			//spending.Inputs.Add(new TxIn(new OutPoint(uint256.Zero, 0), Script.Empty));
-			spending.Outputs.Add(new TxOut(Money.Coins(0.5m), BitcoinAddress.Create("15sYbVpRh6dyWycZMwPdxJWD4xbfxReeHe")));
+			spending.Outputs.Add(new TxOut(Money.Coins(0.5m), BitcoinAddress.Create("15sYbVpRh6dyWycZMwPdxJWD4xbfxReeHe", Network.Main)));
 			spending.Outputs.Add(new TxOut(Money.Coins(0.8m), changeAddress));
 			spending.Outputs.Add(new TxOut(Money.Zero, TxNullDataTemplate.Instance.GenerateScriptPubKey(new byte[] { 1, 2 })));
 
@@ -141,6 +140,8 @@ namespace LedgerWallet.Tests
 			Assert.NotNull(signed);
 		}
 
+		Network network = Network.Main;
+
 		[Fact]
 		[Trait("Manual", "Manual")]
 		public void CanSignTransactionStandardModeConcurrently()
@@ -148,12 +149,12 @@ namespace LedgerWallet.Tests
 			var ledger = GetLedger();
 
 			var walletPubKey = ledger.GetWalletPubKey(new KeyPath("1'/0"));
-			var address = (BitcoinAddress)walletPubKey.Address;
+			var address = walletPubKey.GetAddress(network);
 
-			var changeAddress = (BitcoinAddress)ledger.GetWalletPubKey(new KeyPath("1'/1")).Address;
+			var changeAddress = ledger.GetWalletPubKey(new KeyPath("1'/1")).GetAddress(network);
 
 			Transaction funding = new Transaction();
-			funding.AddInput(Network.Main.GetGenesis().Transactions[0].Inputs[0]);
+			funding.AddInput(network.GetGenesis().Transactions[0].Inputs[0]);
 			funding.Outputs.Add(new TxOut(Money.Coins(1.1m), address));
 			funding.Outputs.Add(new TxOut(Money.Coins(1.0m), address));
 			funding.Outputs.Add(new TxOut(Money.Coins(1.2m), address));
@@ -163,7 +164,7 @@ namespace LedgerWallet.Tests
 			var spending = new Transaction();
 			spending.LockTime = 1;
 			spending.Inputs.AddRange(coins.Select(o => new TxIn(o.Outpoint, o.ScriptPubKey)));
-			spending.Outputs.Add(new TxOut(Money.Coins(0.5m), BitcoinAddress.Create("15sYbVpRh6dyWycZMwPdxJWD4xbfxReeHe")));
+			spending.Outputs.Add(new TxOut(Money.Coins(0.5m), BitcoinAddress.Create("15sYbVpRh6dyWycZMwPdxJWD4xbfxReeHe", Network.Main)));
 			spending.Outputs.Add(new TxOut(Money.Coins(0.8m), changeAddress));
 			spending.Outputs.Add(new TxOut(Money.Zero, TxNullDataTemplate.Instance.GenerateScriptPubKey(new byte[] { 1, 2 })));
 

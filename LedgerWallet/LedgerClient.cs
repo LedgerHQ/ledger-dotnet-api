@@ -54,6 +54,7 @@ namespace LedgerWallet
 			Segwit = 0x01,
 			NativeSegwit = 0x02,
 		}
+
 		public async Task<GetWalletPubKeyResponse> GetWalletPubKeyAsync(KeyPath keyPath, AddressType addressType = AddressType.Legacy, bool display = false)
 		{
 			Guard.AssertKeyPath(keyPath);
