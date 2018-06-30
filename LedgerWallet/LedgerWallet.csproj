@@ -6,7 +6,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="hidlibrary" Version="3.2.46.0" />
-    <PackageReference Include="NBitcoin" Version="4.1.1.2" />
+    <PackageReference Include="NBitcoin" Version="4.1.1.20" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Properties\" />
