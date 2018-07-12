@@ -133,72 +133,72 @@ namespace LedgerWallet.Transports
 				_SemaphoreSlim.Release();
 			}
 		}
-	}
 
-	static UsageSpecification[] _UsageSpecification = new[] { new UsageSpecification(0xf1d0, 0x01) };
-	public static unsafe IEnumerable<HIDU2FTransport> GetHIDTransports(IEnumerable<VendorProductIds> ids = null)
-	{
-		ids = ids ?? WellKnownU2F;
-		return _Registry.GetHIDTransports(ids, _UsageSpecification);
-	}
 
-	protected override byte[] WrapCommandAPDU(Stream command, ref int sequenceIdx)
-	{
-		MemoryStream output = new MemoryStream();
-		int position = (int)output.Position;
-		output.Write(cid, 0, cid.Length);
-		if(sequenceIdx == 0)
+		static UsageSpecification[] _UsageSpecification = new[] { new UsageSpecification(0xf1d0, 0x01) };
+		public static unsafe IEnumerable<HIDU2FTransport> GetHIDTransports(IEnumerable<VendorProductIds> ids = null)
 		{
-			output.WriteByte((byte)(TYPE_INIT | cmd));
-			output.WriteByte((byte)((command.Length >> 8) & 0xff));
-			output.WriteByte((byte)(command.Length & 0xff));
+			ids = ids ?? WellKnownU2F;
+			return _Registry.GetHIDTransports(ids, _UsageSpecification);
 		}
-		else
+
+		protected override byte[] WrapCommandAPDU(Stream command, ref int sequenceIdx)
 		{
-			output.WriteByte((byte)((sequenceIdx - 1) & 0x7f));
+			MemoryStream output = new MemoryStream();
+			int position = (int)output.Position;
+			output.Write(cid, 0, cid.Length);
+			if(sequenceIdx == 0)
+			{
+				output.WriteByte((byte)(TYPE_INIT | cmd));
+				output.WriteByte((byte)((command.Length >> 8) & 0xff));
+				output.WriteByte((byte)(command.Length & 0xff));
+			}
+			else
+			{
+				output.WriteByte((byte)((sequenceIdx - 1) & 0x7f));
+			}
+			var headerSize = (int)(output.Position - position);
+			int blockSize = Math.Min(U2F_HID_PACKET_SIZE - headerSize, (int)command.Length - (int)command.Position);
+			var commantPart = command.ReadBytes(blockSize);
+			output.Write(commantPart, 0, commantPart.Length);
+			while((output.Length % U2F_HID_PACKET_SIZE) != 0)
+				output.WriteByte(0);
+			sequenceIdx++;
+			Debug.Assert(output.Length == U2F_HID_PACKET_SIZE);
+			return output.ToArray();
 		}
-		var headerSize = (int)(output.Position - position);
-		int blockSize = Math.Min(U2F_HID_PACKET_SIZE - headerSize, (int)command.Length - (int)command.Position);
-		var commantPart = command.ReadBytes(blockSize);
-		output.Write(commantPart, 0, commantPart.Length);
-		while((output.Length % U2F_HID_PACKET_SIZE) != 0)
-			output.WriteByte(0);
-		sequenceIdx++;
-		Debug.Assert(output.Length == U2F_HID_PACKET_SIZE);
-		return output.ToArray();
-	}
 
-	protected override byte[] UnwrapReponseAPDU(byte[] data, ref int sequenceIdx, ref int remaining)
-	{
-		MemoryStream output = new MemoryStream();
-		MemoryStream input = new MemoryStream(data);
-		int position = (int)input.Position;
-		if(!input.ReadBytes(cid.Length).SequenceEqual(cid))
-			return null;
-		var cmd = input.ReadByte();
-
-		if(sequenceIdx == 0)
+		protected override byte[] UnwrapReponseAPDU(byte[] data, ref int sequenceIdx, ref int remaining)
 		{
-			if(cmd != (TYPE_INIT | this.cmd) && cmd != STAT_ERR)
+			MemoryStream output = new MemoryStream();
+			MemoryStream input = new MemoryStream(data);
+			int position = (int)input.Position;
+			if(!input.ReadBytes(cid.Length).SequenceEqual(cid))
 				return null;
-			remaining = ((input.ReadByte()) << 8);
-			remaining |= input.ReadByte();
+			var cmd = input.ReadByte();
+
+			if(sequenceIdx == 0)
+			{
+				if(cmd != (TYPE_INIT | this.cmd) && cmd != STAT_ERR)
+					return null;
+				remaining = ((input.ReadByte()) << 8);
+				remaining |= input.ReadByte();
+			}
+
+			if(cmd == STAT_ERR)
+				throw new U2FException((byte)input.ReadByte());
+
+			if(sequenceIdx != 0 && cmd != (0x7f & (sequenceIdx - 1)))
+				return null;
+			var headerSize = input.Position - position;
+			var blockSize = (int)Math.Min(remaining, U2F_HID_PACKET_SIZE - headerSize);
+			byte[] commandPart = new byte[blockSize];
+			if(input.Read(commandPart, 0, commandPart.Length) != commandPart.Length)
+				return null;
+			output.Write(commandPart, 0, commandPart.Length);
+			remaining -= blockSize;
+			sequenceIdx++;
+			return output.ToArray();
 		}
-
-		if(cmd == STAT_ERR)
-			throw new U2FException((byte)input.ReadByte());
-
-		if(sequenceIdx != 0 && cmd != (0x7f & (sequenceIdx - 1)))
-			return null;
-		var headerSize = input.Position - position;
-		var blockSize = (int)Math.Min(remaining, U2F_HID_PACKET_SIZE - headerSize);
-		byte[] commandPart = new byte[blockSize];
-		if(input.Read(commandPart, 0, commandPart.Length) != commandPart.Length)
-			return null;
-		output.Write(commandPart, 0, commandPart.Length);
-		remaining -= blockSize;
-		sequenceIdx++;
-		return output.ToArray();
 	}
-}
 }
