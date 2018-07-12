@@ -107,7 +107,7 @@ namespace LedgerWallet.Transports
 			_Registry = new HIDDeviceTransportRegistry<HIDU2FTransport>(d => new HIDU2FTransport(d));
 		}
 
-		protected override void Init()
+		protected async override Task InitAsync()
 		{
 			using(this.Lock())
 			{
@@ -117,10 +117,10 @@ namespace LedgerWallet.Transports
 					var nonce = RandomUtils.GetBytes(8);
 					var readenNonce = nonce.ToArray();
 					byte[] response;
-					Write(nonce);
+					await WriteAsync(nonce);
 					do
 					{
-						response = Read();
+						response = await ReadAsync();
 						if(response == null)
 							throw new LedgerWalletException("Error while transmission");
 						Array.Copy(response, 0, readenNonce, 0, nonce.Length);

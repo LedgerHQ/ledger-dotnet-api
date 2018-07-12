@@ -44,12 +44,12 @@ namespace LedgerWallet.Transports
 			FileInfo fi = new FileInfo(myass.Location);
 			string folder = IntPtr.Size == 8 ? "x64" : "x86";
 			System.IntPtr moduleHandle = LoadLibraryEx(fi.Directory.FullName + "\\" + folder + "\\hidapi.dll", IntPtr.Zero, 0);
-			if(moduleHandle == IntPtr.Zero)
+			if (moduleHandle == IntPtr.Zero)
 			{
-				if(Marshal.GetLastWin32Error() != 0x7E)
+				if (Marshal.GetLastWin32Error() != 0x7E)
 					throw new Win32Exception();
 				moduleHandle = LoadLibraryEx(Directory.GetCurrentDirectory() + "\\" + folder + "\\hidapi.dll", IntPtr.Zero, 0);
-				if(moduleHandle == IntPtr.Zero)
+				if (moduleHandle == IntPtr.Zero)
 				{
 					fi = new FileInfo(myass.CodeBase.Replace("file:///", ""));
 					moduleHandle = LoadLibraryEx(fi.Directory.FullName + "\\" + folder + "\\hidapi.dll", IntPtr.Zero, 0);
@@ -59,7 +59,7 @@ namespace LedgerWallet.Transports
 
 		protected HIDTransportBase(HidDevice device, UsageSpecification[] acceptedUsageSpecifications)
 		{
-			if(!device.IsOpen)
+			if (!device.IsOpen)
 				device.OpenDevice();
 			_Device = device;
 			_DevicePath = device.DevicePath;
@@ -88,53 +88,53 @@ namespace LedgerWallet.Transports
 		bool initializing = false;
 		public async Task<byte[][]> ExchangeAsync(byte[][] apdus)
 		{
-			if(needInit && !initializing)
+			if (needInit && !initializing)
 			{
 				initializing = true;
-				Init();
+				await InitAsync();
 				needInit = false;
 				initializing = false;
 			}
-			var response = await ExchangeCore(apdus).ConfigureAwait(false);
-			if(response == null)
+			var response = await ExchangeCoreAsync(apdus).ConfigureAwait(false);
+			if (response == null)
 			{
-				if(!RenewTransport())
+				if (!await RenewTransportAsync())
 				{
 					throw new LedgerWalletException("Ledger disconnected");
 				}
-				response = await ExchangeCore(apdus).ConfigureAwait(false);
-				if(response == null)
+				response = await ExchangeCoreAsync(apdus).ConfigureAwait(false);
+				if (response == null)
 					throw new LedgerWalletException("Error while transmission");
 			}
 			return response;
 		}
 
-		bool RenewTransport()
+		async Task<bool> RenewTransportAsync()
 		{
 			var newDevice = EnumerateHIDDevices(new[]
 			{
 				this._VendorProductIds
 			}, _AcceptedUsageSpecifications)
 			.FirstOrDefault(hid => hid.DevicePath == _DevicePath);
-			if(newDevice == null)
+			if (newDevice == null)
 				return false;
 			_Device = newDevice;
-			if(!_Device.IsOpen)
+			if (!_Device.IsOpen)
 				_Device.OpenDevice();
-			Init();
+			await InitAsync();
 			return true;
 		}
 
-		protected virtual void Init()
+		protected async virtual Task InitAsync()
 		{
 		}
 
 		internal static unsafe IEnumerable<HidDevice> EnumerateHIDDevices(IEnumerable<VendorProductIds> vendorProductIds, params UsageSpecification[] acceptedUsages)
 		{
 			List<HidDevice> devices = new List<HidDevice>();
-			foreach(var ids in vendorProductIds)
+			foreach (var ids in vendorProductIds)
 			{
-				if(ids.ProductId == null)
+				if (ids.ProductId == null)
 					devices.AddRange(HidDevices.Enumerate(ids.VendorId));
 				else
 					devices.AddRange(HidDevices.Enumerate(ids.VendorId, ids.ProductId.Value));
@@ -151,27 +151,27 @@ namespace LedgerWallet.Transports
 		const uint MAX_BLOCK = 64;
 		const int DEFAULT_TIMEOUT = 20000;
 
-		internal Task<byte[][]> ExchangeCore(byte[][] apdus)
+		internal async Task<byte[][]> ExchangeCoreAsync(byte[][] apdus)
 		{
-			if(apdus == null || apdus.Length == 0)
+			if (apdus == null || apdus.Length == 0)
 				return null;
 			List<byte[]> resultList = new List<byte[]>();
 			var lastAPDU = apdus.Last();
-			using(Lock())
+			using (Lock())
 			{
-				foreach(var apdu in apdus)
+				foreach (var apdu in apdus)
 				{
-					Write(apdu);
-					var result = Read();
-					if(result == null)
-						return Task.FromResult<byte[][]>(null);
+					await WriteAsync(apdu);
+					var result = await ReadAsync();
+					if (result == null)
+						return null;
 					resultList.Add(result);
 				}
 			}
-			return Task.FromResult(resultList.ToArray());
+			return resultList.ToArray();
 		}
 
-		protected byte[] Read()
+		protected async Task<byte[]> ReadAsync()
 		{
 			byte[] packet = new byte[MAX_BLOCK];
 			MemoryStream response = new MemoryStream();
@@ -179,19 +179,19 @@ namespace LedgerWallet.Transports
 			int sequenceIdx = 0;
 			do
 			{
-				var result = hid_read_timeout(_Device.Handle, packet, MAX_BLOCK);
-				if(result < 0)
+				var result = await hid_read_timeout(_Device.Handle, packet, MAX_BLOCK);
+				if (result < 0)
 					return null;
 				var commandPart = UnwrapReponseAPDU(packet, ref sequenceIdx, ref remaining);
-				if(commandPart == null)
+				if (commandPart == null)
 					return null;
 				response.Write(commandPart, 0, commandPart.Length);
-			} while(remaining != 0);
+			} while (remaining != 0);
 
 			return response.ToArray();
 		}
 
-		protected byte[] Write(byte[] apdu)
+		protected async Task<byte[]> WriteAsync(byte[] apdu)
 		{
 			int sequenceIdx = 0;
 			byte[] packet = null;
@@ -199,8 +199,8 @@ namespace LedgerWallet.Transports
 			do
 			{
 				packet = WrapCommandAPDU(apduStream, ref sequenceIdx);
-				hid_write(_Device.Handle, packet, packet.Length);
-			} while(apduStream.Position != apduStream.Length);
+				await hid_write(_Device.Handle, packet, packet.Length);
+			} while (apduStream.Position != apduStream.Length);
 			return packet;
 		}
 
@@ -214,23 +214,23 @@ namespace LedgerWallet.Transports
 			get; set;
 		}
 
-		private int hid_read_timeout(IntPtr intPtr, byte[] buffer, uint offset, uint length)
+		private async Task<int> hid_read_timeout(IntPtr intPtr, byte[] buffer, uint offset, uint length)
 		{
 			var bytes = new byte[length];
 			Array.Copy(buffer, offset, bytes, 0, length);
-			var result = hid_read_timeout(intPtr, bytes, (uint)length);
+			var result = await hid_read_timeout(intPtr, bytes, (uint)length);
 			Array.Copy(bytes, 0, buffer, offset, length);
 			return result;
 		}
 
 
 
-		internal int hid_read_timeout(IntPtr hidDeviceObject, byte[] buffer, uint length)
+		internal async Task<int> hid_read_timeout(IntPtr hidDeviceObject, byte[] buffer, uint length)
 		{
-			var result = this._Device.Read((int)ReadTimeout.TotalMilliseconds);
-			if(result.Status == HidDeviceData.ReadStatus.Success)
+			var result = await this._Device.ReadAsync((int)ReadTimeout.TotalMilliseconds);
+			if (result.Status == HidDeviceData.ReadStatus.Success)
 			{
-				if(result.Data.Length - 1 > length)
+				if (result.Data.Length - 1 > length)
 					return -1;
 				Array.Copy(result.Data, 1, buffer, 0, length);
 				return result.Data.Length;
@@ -238,11 +238,11 @@ namespace LedgerWallet.Transports
 			return -1;
 		}
 
-		internal int hid_write(IntPtr hidDeviceObject, byte[] buffer, int length)
+		internal async Task<int> hid_write(IntPtr hidDeviceObject, byte[] buffer, int length)
 		{
 			byte[] sent = new byte[length + 1];
 			Array.Copy(buffer, 0, sent, 1, length);
-			if(!this._Device.Write(sent))
+			if (!await this._Device.WriteAsync(sent))
 				return -1;
 			Array.Copy(sent, 0, buffer, 0, length);
 			return length;
