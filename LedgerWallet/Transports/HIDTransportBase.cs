@@ -33,7 +33,6 @@ namespace LedgerWallet.Transports
 	public abstract class HIDTransportBase : ILedgerTransport
 	{
 		internal IHidDevice _Device;
-		readonly string _DevicePath;
 		readonly VendorProductIds _VendorProductIds;
 
 		[DllImport("kernel32.dll", SetLastError = true)]
@@ -60,11 +59,12 @@ namespace LedgerWallet.Transports
 
 		protected HIDTransportBase(IHidDevice device, UsageSpecification[] acceptedUsageSpecifications)
 		{
-			if(!device.IsOpen)
-				device.OpenDevice();
+			//TODO
+			//if(!device.IsOpen)
+			//	device.OpenDevice();
+
 			_Device = device;
-			_DevicePath = device.DevicePath;
-			_VendorProductIds = new VendorProductIds(device.Attributes.VendorId, device.Attributes.ProductId);
+			_VendorProductIds = new VendorProductIds(device.VendorId, device.ProductId);
 			_AcceptedUsageSpecifications = acceptedUsageSpecifications;
 			ReadTimeout = TimeSpan.FromMilliseconds(DEFAULT_TIMEOUT);
 		}
@@ -72,13 +72,9 @@ namespace LedgerWallet.Transports
 		UsageSpecification[] _AcceptedUsageSpecifications;
 
 		bool needInit = true;
-		public string DevicePath
-		{
-			get
-			{
-				return _DevicePath;
-			}
-		}
+
+		//Note: DevicePath has been removed because it is specific to the Windows platform
+		//To get the DevicePath, cast the IHidDevice as WindowsHidDevice and get it from the attributes
 
 		protected SemaphoreSlim _SemaphoreSlim = new SemaphoreSlim(1, 1)
 ;
@@ -94,9 +90,7 @@ namespace LedgerWallet.Transports
 			}
 			var response = await ExchangeCoreAsync(apdus).ConfigureAwait(false);
 
-			//What to do here?
-			throw new NotImplementedException();
-
+			//TODO
 			//if(response == null)
 			//{
 			//	if(!await RenewTransportAsync())
@@ -107,7 +101,7 @@ namespace LedgerWallet.Transports
 			//	if(response == null)
 			//		throw new LedgerWalletException("Error while transmission");
 			//}
-			//return response;
+			return response;
 		}
 
 		//async Task<bool> RenewTransportAsync()
