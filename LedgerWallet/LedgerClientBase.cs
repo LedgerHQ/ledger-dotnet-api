@@ -186,7 +186,7 @@ namespace LedgerWallet
 		}
 		protected async Task<APDUResponse[]> ExchangeAsync(byte[][] apdus)
 		{
-			byte[][] responses = await Transport.ExchangeAsync(apdus).ConfigureAwait(false);
+			byte[][] responses = await Transport.Exchange(apdus).ConfigureAwait(false);
 			List<APDUResponse> resultResponses = new List<APDUResponse>();
 			foreach(var response in responses)
 			{

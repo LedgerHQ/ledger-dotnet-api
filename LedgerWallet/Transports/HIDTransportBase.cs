@@ -83,7 +83,7 @@ namespace LedgerWallet.Transports
 		protected SemaphoreSlim _SemaphoreSlim = new SemaphoreSlim(1, 1)
 ;
 		bool initializing = false;
-		public async Task<byte[][]> ExchangeAsync(byte[][] apdus)
+		public async Task<byte[][]> Exchange(byte[][] apdus)
 		{
 			if(needInit && !initializing)
 			{
