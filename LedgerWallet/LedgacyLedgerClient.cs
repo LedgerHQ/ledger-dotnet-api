@@ -17,6 +17,14 @@ namespace LedgerWallet
 		{
 		}
 
+		public static new IEnumerable<LegacyLedgerClient> GetHIDLedgers()
+		{
+			var ledgers = HIDLedgerTransport.GetHIDTransports()
+							.Select(t => new LegacyLedgerClient(t))
+							.ToList();
+			return ledgers;
+		}
+
 		public Task<VerifyPinResult> VerifyPinAsync(string pin)
 		{
 			return VerifyPinAsync(new UserPin(pin));

@@ -19,7 +19,7 @@ namespace LedgerWallet.Tests
 		public async Task TestDongleCall()
 		{
 			//Assume SetServerMode ran before
-			var ledger = (LegacyLedgerClient)await NanoSTests.GetLedgerAsync(NanoSTests.LedgerType.LegacyLedger);
+			var ledger = GetLedger();
 			Assert.NotNull(ledger);
 			var firmware = await ledger.GetFirmwareVersionAsync();
 			Assert.NotNull(firmware);
@@ -37,7 +37,7 @@ namespace LedgerWallet.Tests
 		public async Task SetServerMode()
 		{
 			//Assume is resetted
-			var ledger = (LegacyLedgerClient)await NanoSTests.GetLedgerAsync(NanoSTests.LedgerType.LegacyLedger);
+			var ledger = GetLedger();
 			var seed = GetSeed();
 			var response = ledger.RegularSetupAsync(new RegularSetup()
 			{
@@ -59,7 +59,7 @@ namespace LedgerWallet.Tests
 		public async Task CanRegularDeveloperSetup()
 		{
 			//Assume is resetted
-			var ledger = (LegacyLedgerClient)await NanoSTests.GetLedgerAsync(NanoSTests.LedgerType.LegacyLedger);
+			var ledger = GetLedger();
 			var response = await ledger.RegularSetupAsync(new RegularSetup()
 			{
 				OperationMode = OperationMode.Developer,
@@ -77,7 +77,7 @@ namespace LedgerWallet.Tests
 		public async Task CanGetAndSetOperation()
 		{
 			//Assume is setup
-			var ledger = (LegacyLedgerClient)await NanoSTests.GetLedgerAsync(NanoSTests.LedgerType.LegacyLedger);
+			var ledger = GetLedger();
 			var op = await ledger.GetOperationModeAsync();
 			var fact = await ledger.GetSecondFactorModeAsync();
 		}
@@ -86,9 +86,9 @@ namespace LedgerWallet.Tests
 		[Trait("Manual", "Manual")]
 		public async Task ResetLedger()
 		{
-			for (int i = 0; i < 3; i++)
+			for(int i = 0; i < 3; i++)
 			{
-				var ledger = (LegacyLedgerClient)await NanoSTests.GetLedgerAsync(NanoSTests.LedgerType.LegacyLedger);
+				var ledger = GetLedger();
 				await ledger.VerifyPinAsync("1121");
 				Debugger.Break(); //Unplug and replug ledger
 			}
@@ -99,7 +99,7 @@ namespace LedgerWallet.Tests
 		public async Task CanSeeRemainingTries()
 		{
 			//Assume is setup
-			var ledger = (LegacyLedgerClient)await NanoSTests.GetLedgerAsync(NanoSTests.LedgerType.LegacyLedger);
+			var ledger = GetLedger();
 			var verifyPinResult = await ledger.VerifyPinAsync("1234");
 			Assert.True(verifyPinResult.IsSuccess);
 
@@ -118,6 +118,12 @@ namespace LedgerWallet.Tests
 			ledger = (LegacyLedgerClient)await NanoSTests.GetLedgerAsync(NanoSTests.LedgerType.LegacyLedger);
 			verifyPinResult.Remaining = await ledger.GetRemainingAttemptsAsync();
 			Assert.Equal(2, verifyPinResult.Remaining);
+		}
+
+		private static LegacyLedgerClient GetLedger()
+		{
+			var ledger = LegacyLedgerClient.GetHIDLedgers().FirstOrDefault();
+			return ledger;
 		}
 	}
 }

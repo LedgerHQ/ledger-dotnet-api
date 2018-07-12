@@ -255,7 +255,6 @@ namespace LedgerWallet
 			}
 			return apdus.ToArray();
 		}
-
 		public async Task<Transaction> SignTransactionAsync(KeyPath keyPath, ICoin[] signedCoins, Transaction[] parents, Transaction transaction, KeyPath changePath = null)
 		{
 			List<SignatureRequest> requests = new List<SignatureRequest>();
