@@ -93,34 +93,38 @@ namespace LedgerWallet.Transports
 				initializing = false;
 			}
 			var response = await ExchangeCoreAsync(apdus).ConfigureAwait(false);
-			if(response == null)
-			{
-				if(!await RenewTransportAsync())
-				{
-					throw new LedgerWalletException("Ledger disconnected");
-				}
-				response = await ExchangeCoreAsync(apdus).ConfigureAwait(false);
-				if(response == null)
-					throw new LedgerWalletException("Error while transmission");
-			}
-			return response;
+
+			//What to do here?
+			throw new NotImplementedException();
+
+			//if(response == null)
+			//{
+			//	if(!await RenewTransportAsync())
+			//	{
+			//		throw new LedgerWalletException("Ledger disconnected");
+			//	}
+			//	response = await ExchangeCoreAsync(apdus).ConfigureAwait(false);
+			//	if(response == null)
+			//		throw new LedgerWalletException("Error while transmission");
+			//}
+			//return response;
 		}
 
-		async Task<bool> RenewTransportAsync()
-		{
-			var newDevice = EnumerateIHidDevices(new[]
-			{
-				this._VendorProductIds
-			}, _AcceptedUsageSpecifications)
-			.FirstOrDefault(hid => hid.DevicePath == _DevicePath);
-			if(newDevice == null)
-				return false;
-			_Device = newDevice;
-			if(!_Device.IsOpen)
-				_Device.OpenDevice();
-			await InitAsync();
-			return true;
-		}
+		//async Task<bool> RenewTransportAsync()
+		//{
+		//	var newDevice = EnumerateIHidDevices(new[]
+		//	{
+		//		this._VendorProductIds
+		//	}, _AcceptedUsageSpecifications)
+		//	.FirstOrDefault(hid => hid.DevicePath == _DevicePath);
+		//	if(newDevice == null)
+		//		return false;
+		//	_Device = newDevice;
+		//	if(!_Device.IsOpen)
+		//		_Device.OpenDevice();
+		//	await InitAsync();
+		//	return true;
+		//}
 
 		protected async virtual Task InitAsync()
 		{

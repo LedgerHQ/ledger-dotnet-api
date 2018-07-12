@@ -1,4 +1,4 @@
-﻿using HidLibrary;
+﻿using Hid.Net;
 using System;
 using System.Collections.Generic;
 using System.Linq;
