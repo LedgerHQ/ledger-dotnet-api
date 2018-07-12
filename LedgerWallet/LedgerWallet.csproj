@@ -5,10 +5,14 @@
 	  <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="hidlibrary" Version="3.2.46.0" />
     <PackageReference Include="NBitcoin" Version="4.1.1.20" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Properties\" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
+    <PackageReference Include="Hid.Net">
+      <Version>1.1.1</Version>
+    </PackageReference>
   </ItemGroup>
 </Project>

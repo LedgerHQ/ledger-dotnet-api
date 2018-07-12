@@ -96,15 +96,15 @@ namespace LedgerWallet.Transports
 				new VendorProductIds(0x2c97, 0x0001),  // Nano S
 		};
 
-		protected HIDU2FTransport(HidDevice device) : base(device, _UsageSpecification)
+		protected HIDU2FTransport(IHidDevice device) : base(device, _UsageSpecification)
 		{
 			ReadTimeout = TimeSpan.FromSeconds(0.5);
 		}
 
-		static readonly HIDDeviceTransportRegistry<HIDU2FTransport> _Registry;
+		static readonly IHidDeviceTransportRegistry<HIDU2FTransport> _Registry;
 		static HIDU2FTransport()
 		{
-			_Registry = new HIDDeviceTransportRegistry<HIDU2FTransport>(d => new HIDU2FTransport(d));
+			_Registry = new IHidDeviceTransportRegistry<HIDU2FTransport>(d => new HIDU2FTransport(d));
 		}
 
 		protected async override Task InitAsync()

@@ -1,4 +1,4 @@
-﻿using HidLibrary;
+﻿using Hid.Net;
 using LedgerWallet.Transports;
 using Microsoft.Win32.SafeHandles;
 using NBitcoin;

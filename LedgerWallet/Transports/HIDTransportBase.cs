@@ -1,4 +1,4 @@
-﻿using HidLibrary;
+﻿using Hid.Net;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -32,7 +32,7 @@ namespace LedgerWallet.Transports
 	}
 	public abstract class HIDTransportBase : ILedgerTransport
 	{
-		internal HidDevice _Device;
+		internal IHidDevice _Device;
 		readonly string _DevicePath;
 		readonly VendorProductIds _VendorProductIds;
 
@@ -58,7 +58,7 @@ namespace LedgerWallet.Transports
 			}
 		}
 
-		protected HIDTransportBase(HidDevice device, UsageSpecification[] acceptedUsageSpecifications)
+		protected HIDTransportBase(IHidDevice device, UsageSpecification[] acceptedUsageSpecifications)
 		{
 			if(!device.IsOpen)
 				device.OpenDevice();
@@ -108,7 +108,7 @@ namespace LedgerWallet.Transports
 
 		async Task<bool> RenewTransportAsync()
 		{
-			var newDevice = EnumerateHIDDevices(new[]
+			var newDevice = EnumerateIHidDevices(new[]
 			{
 				this._VendorProductIds
 			}, _AcceptedUsageSpecifications)
@@ -126,15 +126,15 @@ namespace LedgerWallet.Transports
 		{
 		}
 
-		internal static unsafe IEnumerable<HidDevice> EnumerateHIDDevices(IEnumerable<VendorProductIds> vendorProductIds, params UsageSpecification[] acceptedUsages)
+		internal static unsafe IEnumerable<IHidDevice> EnumerateIHidDevices(IEnumerable<VendorProductIds> vendorProductIds, params UsageSpecification[] acceptedUsages)
 		{
-			List<HidDevice> devices = new List<HidDevice>();
+			List<IHidDevice> devices = new List<IHidDevice>();
 			foreach(var ids in vendorProductIds)
 			{
 				if(ids.ProductId == null)
-					devices.AddRange(HidDevices.Enumerate(ids.VendorId));
+					devices.AddRange(IHidDevices.Enumerate(ids.VendorId));
 				else
-					devices.AddRange(HidDevices.Enumerate(ids.VendorId, ids.ProductId.Value));
+					devices.AddRange(IHidDevices.Enumerate(ids.VendorId, ids.ProductId.Value));
 
 			}
 			return devices
@@ -230,11 +230,11 @@ namespace LedgerWallet.Transports
 
 
 
-		internal async Task<int> hid_read_timeout(IntPtr hidDeviceObject, byte[] buffer, uint length)
+		internal async Task<int> hid_read_timeout(IntPtr IHidDeviceObject, byte[] buffer, uint length)
 		{
 			//ReadAsync isn't supported with this library
 			var result = this._Device.Read((int)ReadTimeout.TotalMilliseconds);
-			if(result.Status == HidDeviceData.ReadStatus.Success)
+			if(result.Status == IHidDeviceData.ReadStatus.Success)
 			{
 				if(result.Data.Length - 1 > length)
 					return -1;
@@ -244,7 +244,7 @@ namespace LedgerWallet.Transports
 			return -1;
 		}
 
-		internal async Task<int> hid_write(IntPtr hidDeviceObject, byte[] buffer, int length)
+		internal async Task<int> hid_write(IntPtr IHidDeviceObject, byte[] buffer, int length)
 		{
 			byte[] sent = new byte[length + 1];
 			Array.Copy(buffer, 0, sent, 1, length);
