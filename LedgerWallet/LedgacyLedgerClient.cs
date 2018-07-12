@@ -17,49 +17,36 @@ namespace LedgerWallet
 		{
 		}
 
-		public static new IEnumerable<LegacyLedgerClient> GetHIDLedgers()
+		public Task<VerifyPinResult> VerifyPinAsync(string pin)
 		{
-			var ledgers = HIDLedgerTransport.GetHIDTransports()
-							.Select(t => new LegacyLedgerClient(t))
-							.ToList();
-			return ledgers;
+			return VerifyPinAsync(new UserPin(pin));
 		}
 
-		public bool VerifyPin(string pin, out int remaining)
+		public async Task<VerifyPinResult> VerifyPinAsync(UserPin pin)
 		{
-			return VerifyPin(new UserPin(pin), out remaining);
-		}
-		public bool VerifyPin(UserPin pin, out int remaining)
-		{
-			remaining = 3;
-			var response = ExchangeSingleAPDUAsync(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_VERIFY_PIN, 0, 0, pin.ToBytes()).GetAwaiter().GetResult();
-			if(response.SW == LedgerWalletConstants.SW_OK)
-				return true;
-			if(response.SW == LedgerWalletConstants.SW_INS_NOT_SUPPORTED)
+			var retVal = new VerifyPinResult();
+
+			var response = await ExchangeSingleAPDUAsync(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_VERIFY_PIN, 0, 0, pin.ToBytes());
+
+			if (response.SW == LedgerWalletConstants.SW_OK)
+			{
+				retVal.IsSuccess = true;
+				return retVal;
+			}
+
+			if (response.SW == LedgerWalletConstants.SW_INS_NOT_SUPPORTED)
 				Throw(response.SW);
-			remaining = (response.SW & 0x0F);
-			return false;
+
+			retVal.Remaining = (response.SW & 0x0F);
+			return retVal;
 		}
-		public int GetRemainingAttempts()
+
+		public async Task<int> GetRemainingAttemptsAsync()
 		{
-			var response = ExchangeSingleAPDUAsync(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_VERIFY_PIN, 0x80, 0, new byte[] { 1 }).GetAwaiter().GetResult();
+			var response = await ExchangeSingleAPDUAsync(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_VERIFY_PIN, 0x80, 0, new byte[] { 1 });
 			return (response.SW & 0x0F);
 		}
-		public bool VerifyPin(string pin)
-		{
-			int remain;
-			return VerifyPin(pin, out remain);
-		}
-		public bool VerifyPin(UserPin pin)
-		{
-			int remain;
-			return VerifyPin(pin, out remain);
-		}
 
-		public OperationMode GetOperationMode()
-		{
-			return GetOperationModeAsync().GetAwaiter().GetResult();
-		}
 		public async Task<OperationMode> GetOperationModeAsync()
 		{
 			var response = await ExchangeSingleAPDUAsync(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_OPERATION_MODE, 0, 0, 0, OK).ConfigureAwait(false);
@@ -71,20 +58,12 @@ namespace LedgerWallet
 			var response = await ExchangeSingleAPDUAsync(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_OPERATION_MODE, 1, 0, 0, OK).ConfigureAwait(false);
 			return (SecondFactorMode)response[0];
 		}
-		public SecondFactorMode GetSecondFactorMode()
+
+		public async Task SetOperationMode(OperationMode value)
 		{
-			return GetSecondFactorModeAsync().GetAwaiter().GetResult();
+			await ExchangeSingleAPDUAsync(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_SET_OPERATION_MODE, 0, 0, new[] { (byte)value }, OK);
 		}
 
-		public void SetOperationMode(OperationMode value)
-		{
-			ExchangeSingleAPDUAsync(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_SET_OPERATION_MODE, 0, 0, new[] { (byte)value }, OK);
-		}
-
-		public SetupResponse RegularSetup(RegularSetup setup)
-		{
-			return RegularSetupAsync(setup).GetAwaiter().GetResult();
-		}
 		public async Task<SetupResponse> RegularSetupAsync(RegularSetup setup)
 		{
 			var response = await ExchangeSingleAPDUAsync(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_SETUP, 0, 0, setup.ToBytes(), OK).ConfigureAwait(false);
@@ -232,5 +211,11 @@ namespace LedgerWallet
 		Relaxed = 0x02,
 		Server = 0x04,
 		Developer = 0x08
+	}
+
+	public class VerifyPinResult
+	{
+		public bool IsSuccess { get; set; }
+		public int Remaining { get; set; } = 3;
 	}
 }
