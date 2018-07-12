@@ -32,7 +32,7 @@ namespace LedgerWallet
 
 		public LedgerClientBase(ILedgerTransport transport)
 		{
-			if(transport == null)
+			if (transport == null)
 				throw new ArgumentNullException("transport");
 			this._Transport = transport;
 		}
@@ -53,7 +53,7 @@ namespace LedgerWallet
 		{
 			int offset = 0;
 			List<byte[]> result = new List<byte[]>();
-			while(offset < data.Length)
+			while (offset < data.Length)
 			{
 				int blockLength = ((data.Length - offset) > 255 ? 255 : data.Length - offset);
 				byte[] apdu = new byte[blockLength + 5];
@@ -74,7 +74,7 @@ namespace LedgerWallet
 			int offset = 0;
 			int maxBlockSize = 255 - data2.Length;
 			List<byte[]> apdus = new List<byte[]>();
-			while(offset < data.Length)
+			while (offset < data.Length)
 			{
 				int blockLength = ((data.Length - offset) > maxBlockSize ? maxBlockSize : data.Length - offset);
 				var lastBlock = ((offset + blockLength) == data.Length);
@@ -85,7 +85,7 @@ namespace LedgerWallet
 				apdu[3] = p2;
 				apdu[4] = (byte)(blockLength + (lastBlock ? data2.Length : 0));
 				Array.Copy(data, offset, apdu, 5, blockLength);
-				if(lastBlock)
+				if (lastBlock)
 				{
 					Array.Copy(data2, 0, apdu, 5 + blockLength, data2.Length);
 				}
@@ -103,7 +103,7 @@ namespace LedgerWallet
 
 		protected void CheckSW(int[] acceptedSW, int sw)
 		{
-			if(!acceptedSW.Contains(sw))
+			if (!acceptedSW.Contains(sw))
 			{
 				Throw(sw);
 			}
@@ -111,7 +111,7 @@ namespace LedgerWallet
 
 		protected virtual string GetErrorMessage(LedgerWalletStatus status)
 		{
-			switch(status.SW)
+			switch (status.SW)
 			{
 				case 0x6D00:
 					return "INS not supported";
@@ -133,9 +133,9 @@ namespace LedgerWallet
 					return "OK";
 				default:
 					{
-						if((status.SW & 0xFF00) != 0x6F00)
+						if ((status.SW & 0xFF00) != 0x6F00)
 							return "Unknown error";
-						switch(status.InternalSW)
+						switch (status.InternalSW)
 						{
 							case 0xAA:
 								return "The dongle must be reinserted";
@@ -177,9 +177,9 @@ namespace LedgerWallet
 		{
 			var responses = await ExchangeAsync(apdus).ConfigureAwait(false);
 			var last = responses.Last();
-			foreach(var response in responses)
+			foreach (var response in responses)
 			{
-				if(response != last)
+				if (response != last)
 					CheckSW(OK, response.SW);
 			}
 			return last;
@@ -189,15 +189,15 @@ namespace LedgerWallet
 		{
 			byte[][] responses = await Transport.ExchangeAsync(apdus).ConfigureAwait(false);
 			List<APDUResponse> resultResponses = new List<APDUResponse>();
-			foreach(var response in responses)
+			foreach (var response in responses)
 			{
-				if(response.Length < 2)
+				if (response.Length < 2)
 				{
 					throw new LedgerWalletException("Truncated response");
 				}
 				int sw = ((int)(response[response.Length - 2] & 0xff) << 8) |
 						(int)(response[response.Length - 1] & 0xff);
-				if(sw == 0x6faa)
+				if (sw == 0x6faa)
 					Throw(sw);
 				byte[] result = new byte[response.Length - 2];
 				Array.Copy(response, 0, result, 0, response.Length - 2);
