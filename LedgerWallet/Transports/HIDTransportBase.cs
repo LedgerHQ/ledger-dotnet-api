@@ -184,7 +184,7 @@ namespace LedgerWallet.Transports
 			int sequenceIdx = 0;
 			do
 			{
-				var result = await hid_read_timeout(_Device.Handle, packet, MAX_BLOCK);
+				var result = await hid_read_timeout(packet, MAX_BLOCK);
 				if(result < 0)
 					return null;
 				var commandPart = UnwrapReponseAPDU(packet, ref sequenceIdx, ref remaining);
@@ -204,7 +204,7 @@ namespace LedgerWallet.Transports
 			do
 			{
 				packet = WrapCommandAPDU(apduStream, ref sequenceIdx);
-				await hid_write(_Device.Handle, packet, packet.Length);
+				await hid_write(packet, packet.Length);
 			} while(apduStream.Position != apduStream.Length);
 			return packet;
 		}
@@ -219,38 +219,31 @@ namespace LedgerWallet.Transports
 			get; set;
 		}
 
-		private async Task<int> hid_read_timeout(IntPtr intPtr, byte[] buffer, uint offset, uint length)
+		private async Task<int> hid_read_timeout(byte[] buffer, uint offset, uint length)
 		{
 			var bytes = new byte[length];
 			Array.Copy(buffer, offset, bytes, 0, length);
-			var result = await hid_read_timeout(intPtr, bytes, (uint)length);
+			var result = await hid_read_timeout(bytes, (uint)length);
 			Array.Copy(bytes, 0, buffer, offset, length);
 			return result;
 		}
 
 
 
-		internal async Task<int> hid_read_timeout(IntPtr IHidDeviceObject, byte[] buffer, uint length)
+		internal async Task<int> hid_read_timeout(byte[] buffer, uint length)
 		{
-			//ReadAsync isn't supported with this library
-			var result = this._Device.Read((int)ReadTimeout.TotalMilliseconds);
-			if(result.Status == IHidDeviceData.ReadStatus.Success)
-			{
-				if(result.Data.Length - 1 > length)
-					return -1;
-				Array.Copy(result.Data, 1, buffer, 0, length);
-				return result.Data.Length;
-			}
-			return -1;
+			var result = await this._Device.ReadAsync();
+			if(result.Length - 1 > length)
+				return -1;
+			Array.Copy(result, 1, buffer, 0, length);
+			return result.Length;
 		}
 
-		internal async Task<int> hid_write(IntPtr IHidDeviceObject, byte[] buffer, int length)
+		internal async Task<int> hid_write(byte[] buffer, int length)
 		{
 			byte[] sent = new byte[length + 1];
 			Array.Copy(buffer, 0, sent, 1, length);
-			//WriteAsync isn't supported with this library
-			if(!this._Device.Write(sent))
-				return -1;
+			await this._Device.WriteAsync(sent);
 			Array.Copy(sent, 0, buffer, 0, length);
 			return length;
 		}
