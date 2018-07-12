@@ -17,6 +17,7 @@ namespace LedgerWallet
 		{
 		}
 
+#if(!NETSTANDARD2_0)
 		public static new IEnumerable<LegacyLedgerClient> GetHIDLedgers()
 		{
 			var ledgers = HIDLedgerTransport.GetHIDTransports()
@@ -24,6 +25,7 @@ namespace LedgerWallet
 							.ToList();
 			return ledgers;
 		}
+#endif
 
 		public Task<VerifyPinResult> VerifyPinAsync(string pin)
 		{

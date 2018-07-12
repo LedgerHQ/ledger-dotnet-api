@@ -23,7 +23,7 @@ namespace LedgerWallet.Tests
 			Assert.NotNull(ledger);
 			var firmware = await ledger.GetFirmwareVersionAsync();
 			Assert.NotNull(firmware);
-			Assert.True(firmware.ToString().Contains("Loader"));
+			Assert.Contains(firmware.ToString(), "Loader");
 			Assert.True((await ledger.VerifyPinAsync("1234")).IsSuccess);
 
 			var walletPubKey = await ledger.GetWalletPubKeyAsync(new KeyPath("1'/0"));
@@ -39,7 +39,7 @@ namespace LedgerWallet.Tests
 			//Assume is resetted
 			var ledger = GetLedger();
 			var seed = GetSeed();
-			var response = ledger.RegularSetupAsync(new RegularSetup()
+			var response = await ledger.RegularSetupAsync(new RegularSetup()
 			{
 				OperationMode = OperationMode.Server,
 				DongleFeatures = DongleFeatures.EnableAllSigHash | DongleFeatures.RFC6979 | DongleFeatures.SkipSecondFactor,
@@ -110,8 +110,8 @@ namespace LedgerWallet.Tests
 
 			var ex = await Assert.ThrowsAsync<LedgerWalletException>(async () => verifyPinResult.Remaining = await ledger.GetRemainingAttemptsAsync());
 			Assert.NotNull(ex.Status);
-			Assert.NotNull(ex.Status.SW == 0x6FAA);
-			Assert.NotNull(ex.Status.InternalSW == 0x00AA);
+			Assert.True(ex.Status.SW == 0x6FAA);
+			Assert.True(ex.Status.InternalSW == 0x00AA);
 
 			Debugger.Break(); //Remove then insert
 
@@ -122,8 +122,12 @@ namespace LedgerWallet.Tests
 
 		private static LegacyLedgerClient GetLedger()
 		{
+#if(!NETCOREAPP2_0)
 			var ledger = LegacyLedgerClient.GetHIDLedgers().FirstOrDefault();
 			return ledger;
+#else
+			return (LegacyLedgerClient)NanoSTests.GetLedgerAsync(NanoSTests.LedgerType.LegacyLedger).GetAwaiter().GetResult();
+#endif
 		}
 	}
 }

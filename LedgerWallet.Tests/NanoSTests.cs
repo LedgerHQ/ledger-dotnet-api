@@ -1,4 +1,6 @@
-﻿using LedgerWallet.Transports;
+﻿using Hid.Net;
+using LedgerWallet.Transports;
+using LedgerWallet.U2F;
 using NBitcoin;
 using NBitcoin.DataEncoders;
 using System;
@@ -13,167 +15,201 @@ using Xunit;
 
 namespace LedgerWallet.Tests
 {
-	[Trait("NanoS", "NanoS")]
-	public class NanoSTests
-	{
+    [Trait("NanoS", "NanoS")]
+    public class NanoSTests
+    {
 
-		[Fact]
-		public async Task LedgerIsThreadSafe()
+        [Fact]
+        public async Task LedgerIsThreadSafe()
+        {
+            var ledger = (LedgerClient)await GetLedgerAsync(LedgerType.Ledger);
+
+            var tasks = new List<Task>();
+
+            for(int i = 0; i < 50; i++)
+            {
+                tasks.Add(ledger.GetWalletPubKeyAsync(new KeyPath("1'/0")));
+                tasks.Add(ledger.GetFirmwareVersionAsync());
+            }
+
+            await Task.WhenAll(tasks);
+        }
+
+        [Fact]
+        [Trait("Manual", "Manual")]
+        public async Task CanSignTransactionStandardMode()
+        {
+            await CanSignTransactionStandardModeCore(true);
+            await CanSignTransactionStandardModeCore(false);
+        }
+
+        [Fact]
+        [Trait("Manual", "Manual")]
+        public async Task CanGetWalletPubKey()
+        {
+            var ledger = (LedgerClient)await GetLedgerAsync(LedgerType.Ledger);
+            var firmwareVersion = await ledger.GetFirmwareVersionAsync();
+            var path = new KeyPath("1'/0");
+            var walletPubKeyResponse = await ledger.GetWalletPubKeyAsync(path, LedgerClient.AddressType.Legacy, true);
+            await ledger.GetWalletPubKeyAsync(path, LedgerClient.AddressType.NativeSegwit, false);
+            await ledger.GetWalletPubKeyAsync(path, LedgerClient.AddressType.Segwit, false);
+        }
+
+        private async Task CanSignTransactionStandardModeCore(bool segwit)
+        {
+            var ledger = (LedgerClient)await GetLedgerAsync(LedgerType.Ledger);
+            var walletPubKey = await ledger.GetWalletPubKeyAsync(new KeyPath("1'/0"));
+            var address = segwit ? walletPubKey.UncompressedPublicKey.Compress().WitHash.ScriptPubKey : walletPubKey.GetAddress(network).ScriptPubKey;
+
+            var response = await ledger.GetWalletPubKeyAsync(new KeyPath("1'/1"));
+            var changeAddress = response.GetAddress(network);
+
+            Transaction funding = network.Consensus.ConsensusFactory.CreateTransaction();
+            funding.AddInput(Network.Main.GetGenesis().Transactions[0].Inputs[0]);
+            funding.Outputs.Add(new TxOut(Money.Coins(1.1m), address));
+            funding.Outputs.Add(new TxOut(Money.Coins(1.0m), address));
+            funding.Outputs.Add(new TxOut(Money.Coins(1.2m), address));
+
+            var coins = funding.Outputs.AsCoins();
+
+            var spending = network.Consensus.ConsensusFactory.CreateTransaction();
+            spending.LockTime = 1;
+            spending.Inputs.AddRange(coins.Select(o => new TxIn(o.Outpoint, Script.Empty)));
+            spending.Inputs[0].Sequence = 1;
+            spending.Outputs.Add(new TxOut(Money.Coins(0.5m), BitcoinAddress.Create("15sYbVpRh6dyWycZMwPdxJWD4xbfxReeHe", Network.Main)));
+            spending.Outputs.Add(new TxOut(Money.Coins(0.8m), changeAddress));
+            spending.Outputs.Add(new TxOut(Money.Zero, TxNullDataTemplate.Instance.GenerateScriptPubKey(new byte[] { 1, 2 })));
+
+
+            var requests = new SignatureRequest[]{
+                new SignatureRequest()
+                {
+                    InputCoin = new Coin(funding, 0),
+                    InputTransaction = funding,
+                    KeyPath = new KeyPath("1'/0")
+                },
+                new SignatureRequest()
+                {
+                    InputCoin = new Coin(funding, 1),
+                    InputTransaction = funding,
+                    KeyPath = new KeyPath("1'/0")
+                },
+                new SignatureRequest()
+                {
+                    InputCoin = new Coin(funding, 2),
+                    InputTransaction = funding,
+                    KeyPath = new KeyPath("1'/0")
+                },
+            };
+
+            if(segwit)
+            {
+                foreach(var req in requests)
+                    req.InputTransaction = null;
+            }
+
+            //should show 0.5 and 2.0 btc in fee
+            var signed = await ledger.SignTransactionAsync(requests, spending, new KeyPath("1'/1"));
+            //Assert.Equal(Script.Empty, spending.Inputs.Last().ScriptSig);
+            Assert.NotNull(signed);
+        }
+
+        Network network = Network.Main;
+
+        [Fact]
+        [Trait("Manual", "Manual")]
+        public async Task CanSignTransactionStandardModeConcurrently()
+        {
+            var ledger = (LedgerClient)await GetLedgerAsync(LedgerType.Ledger);
+
+            var walletPubKey = await ledger.GetWalletPubKeyAsync(new KeyPath("1'/0"));
+            var address = walletPubKey.GetAddress(network);
+
+            var walletPubKey2 = await ledger.GetWalletPubKeyAsync(new KeyPath("1'/1"));
+            var changeAddress = walletPubKey2.GetAddress(network);
+
+            Transaction funding = network.Consensus.ConsensusFactory.CreateTransaction();
+            funding.AddInput(network.GetGenesis().Transactions[0].Inputs[0]);
+            funding.Outputs.Add(new TxOut(Money.Coins(1.1m), address));
+            funding.Outputs.Add(new TxOut(Money.Coins(1.0m), address));
+            funding.Outputs.Add(new TxOut(Money.Coins(1.2m), address));
+
+            var coins = funding.Outputs.AsCoins();
+
+            var spending = network.Consensus.ConsensusFactory.CreateTransaction();
+            spending.LockTime = 1;
+            spending.Inputs.AddRange(coins.Select(o => new TxIn(o.Outpoint, o.ScriptPubKey)));
+            spending.Outputs.Add(new TxOut(Money.Coins(0.5m), BitcoinAddress.Create("15sYbVpRh6dyWycZMwPdxJWD4xbfxReeHe", Network.Main)));
+            spending.Outputs.Add(new TxOut(Money.Coins(0.8m), changeAddress));
+            spending.Outputs.Add(new TxOut(Money.Zero, TxNullDataTemplate.Instance.GenerateScriptPubKey(new byte[] { 1, 2 })));
+
+            var tasks = new List<Task>();
+
+            for(var i = 0; i < 5; i++)
+            {
+                //should show 0.5 and 2.0 btc in fee
+                var signed = ledger.SignTransactionAsync(
+                  new KeyPath("1'/0"),
+                  new Coin[]
+                {
+                new Coin(funding, 0),
+                new Coin(funding, 1),
+                new Coin(funding, 2),
+                }, new Transaction[]
+                {
+                funding
+                }, spending, new KeyPath("1'/1"));
+
+                tasks.Add(signed);
+            }
+
+            await Task.WhenAll(tasks);
+        }
+
+#if(!NETCOREAPP2_0)
+		public static Task<LedgerClientBase> GetLedgerAsync(LedgerType ledgerType  = LedgerType.Ledger)
 		{
-			var ledger = (LedgerClient)await GetLedgerAsync(LedgerType.Ledger);
-
-			var tasks = new List<Task>();
-
-			for (int i = 0; i < 50; i++)
-			{
-				tasks.Add(ledger.GetWalletPubKeyAsync(new KeyPath("1'/0")));
-				tasks.Add(ledger.GetFirmwareVersionAsync());
-			}
-
-			await Task.WhenAll(tasks);
+			return Task.FromResult<LedgerClientBase>(LedgerClient.GetHIDLedgers().FirstOrDefault());
 		}
+#else
+        public async static Task<LedgerClientBase> GetLedgerAsync(LedgerType ledgerType = LedgerType.Ledger)
+        {
+            var vid = (ushort)11415;
+            var devices = WindowsHidDevice.GetConnectedDeviceInformations();
+            var potentialDevices = devices.Where(d => d.VendorId == vid).ToList();
 
-		[Fact]
-		[Trait("Manual", "Manual")]
-		public async Task CanSignTransactionStandardMode()
-		{
-			await CanSignTransactionStandardModeCore(true);
-			await CanSignTransactionStandardModeCore(false);
-		}
+            var acceptedUsages = new[] { new UsageSpecification(65440, 0x01) };
 
-		[Fact]
-		[Trait("Manual", "Manual")]
-		public async Task CanGetWalletPubKey()
-		{
-			var ledger = (LedgerClient)await GetLedgerAsync(LedgerType.Ledger);
-			var firmwareVersion = ledger.GetFirmwareVersionAsync();
-			var path = new KeyPath("1'/0");
-			var walletPubKeyResponse = ledger.GetWalletPubKeyAsync(path, LedgerClient.AddressType.Legacy, true);
-			await ledger.GetWalletPubKeyAsync(path, LedgerClient.AddressType.NativeSegwit, false);
-			await ledger.GetWalletPubKeyAsync(path, LedgerClient.AddressType.Segwit, false);
-		}
+            var ledgerDeviceInformation = devices
+            .FirstOrDefault(d =>
+            acceptedUsages == null ||
+            acceptedUsages.Length == 0 ||
+            acceptedUsages.Any(u => d.UsagePage == u.UsagePage && d.Usage == u.Usage));
 
-		public async Task CanSignTransactionStandardModeCore(bool segwit)
-		{
-			var ledger = (LedgerClient)await GetLedgerAsync(LedgerType.Ledger);
-			var walletPubKey = await ledger.GetWalletPubKeyAsync(new KeyPath("1'/0"));
-			var address = segwit ? walletPubKey.UncompressedPublicKey.Compress().WitHash.ScriptPubKey : walletPubKey.GetAddress(network).ScriptPubKey;
+            var windowsHidDevice = new WindowsHidDevice(ledgerDeviceInformation);
+            windowsHidDevice.DataHasExtraByte = true;
+            await windowsHidDevice.InitializeAsync();
+            var ledgerTransport = new HIDLedgerTransport(windowsHidDevice);
 
-			var response = await ledger.GetWalletPubKeyAsync(new KeyPath("1'/1"));
-			var changeAddress = response.GetAddress(network);
+            switch(ledgerType)
+            {
+                case LedgerType.Ledger:
+                    return new LedgerClient(ledgerTransport);
+                case LedgerType.LegacyLedger:
+                    return new LegacyLedgerClient(ledgerTransport);
+                case LedgerType.U2F:
+                    return new U2FClient(ledgerTransport);
+                default:
+                    throw new NotImplementedException();
+            }
+        }
+#endif
 
-			Transaction funding = new Transaction();
-			funding.AddInput(Network.Main.GetGenesis().Transactions[0].Inputs[0]);
-			funding.Outputs.Add(new TxOut(Money.Coins(1.1m), address));
-			funding.Outputs.Add(new TxOut(Money.Coins(1.0m), address));
-			funding.Outputs.Add(new TxOut(Money.Coins(1.2m), address));
-
-			var coins = funding.Outputs.AsCoins();
-
-			var spending = new Transaction();
-			spending.LockTime = 1;
-			spending.Inputs.AddRange(coins.Select(o => new TxIn(o.Outpoint, Script.Empty)));
-			spending.Inputs[0].Sequence = 1;
-			spending.Outputs.Add(new TxOut(Money.Coins(0.5m), BitcoinAddress.Create("15sYbVpRh6dyWycZMwPdxJWD4xbfxReeHe", Network.Main)));
-			spending.Outputs.Add(new TxOut(Money.Coins(0.8m), changeAddress));
-			spending.Outputs.Add(new TxOut(Money.Zero, TxNullDataTemplate.Instance.GenerateScriptPubKey(new byte[] { 1, 2 })));
-
-
-			var requests = new SignatureRequest[]{
-				new SignatureRequest()
-				{
-					InputCoin = new Coin(funding, 0),
-					InputTransaction = funding,
-					KeyPath = new KeyPath("1'/0")
-				},
-				new SignatureRequest()
-				{
-					InputCoin = new Coin(funding, 1),
-					InputTransaction = funding,
-					KeyPath = new KeyPath("1'/0")
-				},
-				new SignatureRequest()
-				{
-					InputCoin = new Coin(funding, 2),
-					InputTransaction = funding,
-					KeyPath = new KeyPath("1'/0")
-				},
-			};
-
-			if (segwit)
-			{
-				foreach (var req in requests)
-					req.InputTransaction = null;
-			}
-
-			//should show 0.5 and 2.0 btc in fee
-			var signed = await ledger.SignTransactionAsync(requests, spending, new KeyPath("1'/1"));
-			//Assert.Equal(Script.Empty, spending.Inputs.Last().ScriptSig);
-			Assert.NotNull(signed);
-		}
-
-		Network network = Network.Main;
-
-		[Fact]
-		[Trait("Manual", "Manual")]
-		public async Task CanSignTransactionStandardModeConcurrently()
-		{
-			var ledger = (LedgerClient)await GetLedgerAsync(LedgerType.Ledger);
-
-			var walletPubKey = await ledger.GetWalletPubKeyAsync(new KeyPath("1'/0"));
-			var address = walletPubKey.GetAddress(network);
-
-			var walletPubKey2 = await ledger.GetWalletPubKeyAsync(new KeyPath("1'/1"));
-			var changeAddress = walletPubKey2.GetAddress(network);
-
-			Transaction funding = new Transaction();
-			funding.AddInput(network.GetGenesis().Transactions[0].Inputs[0]);
-			funding.Outputs.Add(new TxOut(Money.Coins(1.1m), address));
-			funding.Outputs.Add(new TxOut(Money.Coins(1.0m), address));
-			funding.Outputs.Add(new TxOut(Money.Coins(1.2m), address));
-
-			var coins = funding.Outputs.AsCoins();
-
-			var spending = new Transaction();
-			spending.LockTime = 1;
-			spending.Inputs.AddRange(coins.Select(o => new TxIn(o.Outpoint, o.ScriptPubKey)));
-			spending.Outputs.Add(new TxOut(Money.Coins(0.5m), BitcoinAddress.Create("15sYbVpRh6dyWycZMwPdxJWD4xbfxReeHe", Network.Main)));
-			spending.Outputs.Add(new TxOut(Money.Coins(0.8m), changeAddress));
-			spending.Outputs.Add(new TxOut(Money.Zero, TxNullDataTemplate.Instance.GenerateScriptPubKey(new byte[] { 1, 2 })));
-
-			var tasks = new List<Task>();
-
-			for (var i = 0; i < 5; i++)
-			{
-				//should show 0.5 and 2.0 btc in fee
-				var signed = ledger.SignTransactionAsync(
-				  new KeyPath("1'/0"),
-				  new Coin[]
-				{
-				new Coin(funding, 0),
-				new Coin(funding, 1),
-				new Coin(funding, 2),
-				}, new Transaction[]
-				{
-				funding
-				}, spending, new KeyPath("1'/1"));
-
-				tasks.Add(signed);
-			}
-
-			await Task.WhenAll(tasks);
-		}
-
-		public async static Task<LedgerClientBase> GetLedgerAsync(LedgerType ledgerType)
-		{
-			return LedgerClient.GetHIDLedgers().First();
-		}
-
-		public enum LedgerType
-		{
-			Ledger,
-			LegacyLedger,
-			U2F
-		}
-	}
+        public enum LedgerType
+        {
+            Ledger,
+            LegacyLedger,
+            U2F
+        }
+    }
 }
