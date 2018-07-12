@@ -232,7 +232,7 @@ namespace LedgerWallet.Transports
 
 		internal async Task<int> hid_read_timeout(IntPtr hidDeviceObject, byte[] buffer, uint length)
 		{
-			var result = await this._Device.ReadAsync((int)ReadTimeout.TotalMilliseconds);
+			var result = this._Device.Read((int)ReadTimeout.TotalMilliseconds);
 			if(result.Status == HidDeviceData.ReadStatus.Success)
 			{
 				if(result.Data.Length - 1 > length)
@@ -247,7 +247,7 @@ namespace LedgerWallet.Transports
 		{
 			byte[] sent = new byte[length + 1];
 			Array.Copy(buffer, 0, sent, 1, length);
-			if(!await this._Device.WriteAsync(sent))
+			if(!this._Device.Write(sent))
 				return -1;
 			Array.Copy(sent, 0, buffer, 0, length);
 			return length;
