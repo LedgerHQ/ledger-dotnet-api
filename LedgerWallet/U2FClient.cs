@@ -266,7 +266,7 @@ namespace LedgerWallet.U2F
 					apduStream.Write(data, 0, data.Length);
 					apduStream.WriteByte(0x04);
 					apduStream.WriteByte(0);
-					return await ExchangeApdus(new byte[][] { apduStream.ToArray() }, OK).ConfigureAwait(false);
+					return await ExchangeApdusAsync(new byte[][] { apduStream.ToArray() }, OK).ConfigureAwait(false);
 				}
 				catch(LedgerWalletException ex)
 				{
@@ -284,7 +284,7 @@ namespace LedgerWallet.U2F
 			apdu[2] = p1;
 			apdu[3] = p2;
 			Array.Copy(data, 0, apdu, 4, data.Length);
-			return ExchangeSingle(new byte[][] { apdu });
+			return ExchangeSingleAsync(new byte[][] { apdu });
 		}
 
 	}

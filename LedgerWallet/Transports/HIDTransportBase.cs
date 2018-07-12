@@ -86,7 +86,7 @@ namespace LedgerWallet.Transports
 		}
 
 		bool initializing = false;
-		public async Task<byte[][]> Exchange(byte[][] apdus)
+		public async Task<byte[][]> ExchangeAsync(byte[][] apdus)
 		{
 			if(needInit && !initializing)
 			{

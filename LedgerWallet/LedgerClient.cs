@@ -31,7 +31,7 @@ namespace LedgerWallet
 
 		public async Task<LedgerWalletFirmware> GetFirmwareVersionAsync()
 		{
-			byte[] response = await ExchangeSingleAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_FIRMWARE_VERSION, (byte)0x00, (byte)0x00, 0x00, OK).ConfigureAwait(false);
+			byte[] response = await ExchangeSingleAPDUAsync(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_FIRMWARE_VERSION, (byte)0x00, (byte)0x00, 0x00, OK).ConfigureAwait(false);
 			return new LedgerWalletFirmware(response);
 		}
 		public LedgerWalletFirmware GetFirmwareVersion()
@@ -60,7 +60,7 @@ namespace LedgerWallet
 			Guard.AssertKeyPath(keyPath);
 			byte[] bytes = Serializer.Serialize(keyPath);
 			//bytes[0] = 10;
-			byte[] response = await ExchangeSingleAPDU(
+			byte[] response = await ExchangeSingleAPDUAsync(
 				LedgerWalletConstants.LedgerWallet_CLA,
 				LedgerWalletConstants.LedgerWallet_INS_GET_WALLET_PUBLIC_KEY,
 				(byte)(display ? 1 : 0),
@@ -169,7 +169,7 @@ namespace LedgerWallet
 			}
 			// Locktime
 			apdus.Add(CreateAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_TRUSTED_INPUT, (byte)0x80, (byte)0x00, transaction.LockTime.ToBytes()));
-			byte[] response = await ExchangeApdus(apdus.ToArray(), OK).ConfigureAwait(false);
+			byte[] response = await ExchangeApdusAsync(apdus.ToArray(), OK).ConfigureAwait(false);
 			return new TrustedInput(response);
 		}
 
@@ -363,7 +363,7 @@ namespace LedgerWallet
 				}
 				apdus.Add(UntrustedHashSign(sigRequest.KeyPath, null, transaction.LockTime, SigHash.All));
 			}
-			var responses = await Exchange(apdus.ToArray()).ConfigureAwait(false);
+			var responses = await ExchangeAsync(apdus.ToArray()).ConfigureAwait(false);
 			foreach(var response in responses)
 				if(response.Response.Length > 10) //Probably a signature
 					response.Response[0] = 0x30;
