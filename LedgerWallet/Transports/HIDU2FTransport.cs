@@ -107,30 +107,30 @@ namespace LedgerWallet.Transports
 			_Registry = new HIDDeviceTransportRegistry<HIDU2FTransport>(d => new HIDU2FTransport(d));
 		}
 
-		protected override void Init()
+		protected async override Task InitAsync()
 		{
-			using(this.Lock())
+			await _SemaphoreSlim.WaitAsync();
+
+			cmd = CMD_INIT;
+			try
 			{
-				cmd = CMD_INIT;
-				try
+				var nonce = RandomUtils.GetBytes(8);
+				var readenNonce = nonce.ToArray();
+				byte[] response;
+				await WriteAsync(nonce);
+				do
 				{
-					var nonce = RandomUtils.GetBytes(8);
-					var readenNonce = nonce.ToArray();
-					byte[] response;
-					Write(nonce);
-					do
-					{
-						response = Read();
-						if(response == null)
-							throw new LedgerWalletException("Error while transmission");
-						Array.Copy(response, 0, readenNonce, 0, nonce.Length);
-					} while(!readenNonce.SequenceEqual(nonce));
-					Array.Copy(response, 8, cid, 0, cid.Length);
-				}
-				finally
-				{
-					cmd = CMD_APDU;
-				}
+					response = await ReadAsync();
+					if(response == null)
+						throw new LedgerWalletException("Error while transmission");
+					Array.Copy(response, 0, readenNonce, 0, nonce.Length);
+				} while(!readenNonce.SequenceEqual(nonce));
+				Array.Copy(response, 8, cid, 0, cid.Length);
+			}
+			finally
+			{
+				cmd = CMD_APDU;
+				_SemaphoreSlim.Release();
 			}
 		}
 

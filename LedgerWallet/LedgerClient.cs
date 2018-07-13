@@ -31,20 +31,8 @@ namespace LedgerWallet
 
 		public async Task<LedgerWalletFirmware> GetFirmwareVersionAsync()
 		{
-			byte[] response = await ExchangeSingleAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_FIRMWARE_VERSION, (byte)0x00, (byte)0x00, 0x00, OK).ConfigureAwait(false);
+			byte[] response = await ExchangeSingleAPDUAsync(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_FIRMWARE_VERSION, (byte)0x00, (byte)0x00, 0x00, OK).ConfigureAwait(false);
 			return new LedgerWalletFirmware(response);
-		}
-		public LedgerWalletFirmware GetFirmwareVersion()
-		{
-			return GetFirmwareVersionAsync().GetAwaiter().GetResult();
-		}
-		public GetWalletPubKeyResponse GetWalletPubKey(KeyPath keyPath)
-		{
-			return GetWalletPubKeyAsync(keyPath).GetAwaiter().GetResult();
-		}
-		public GetWalletPubKeyResponse GetWalletPubKey(KeyPath keyPath, AddressType displayMode = AddressType.Legacy, bool display = false)
-		{
-			return GetWalletPubKeyAsync(keyPath, displayMode, display).GetAwaiter().GetResult();
 		}
 
 		[Flags]
@@ -60,7 +48,7 @@ namespace LedgerWallet
 			Guard.AssertKeyPath(keyPath);
 			byte[] bytes = Serializer.Serialize(keyPath);
 			//bytes[0] = 10;
-			byte[] response = await ExchangeSingleAPDU(
+			byte[] response = await ExchangeSingleAPDUAsync(
 				LedgerWalletConstants.LedgerWallet_CLA,
 				LedgerWalletConstants.LedgerWallet_INS_GET_WALLET_PUBLIC_KEY,
 				(byte)(display ? 1 : 0),
@@ -68,19 +56,9 @@ namespace LedgerWallet
 			return new GetWalletPubKeyResponse(response);
 		}
 
-		public GetWalletPubKeyResponse GetWalletMasterKey()
-		{
-			return GetWalletMasterKeyAsync().GetAwaiter().GetResult();
-		}
-
 		public async Task<GetWalletPubKeyResponse> GetWalletMasterKeyAsync()
 		{
 			return await GetWalletPubKeyAsync(new KeyPath("0'"));
-		}
-
-		public KeyPath GetWalletHDKeyPathForSegwitAddress(KeyPath rootKeyPath, string segwitAddress, Network network, int startAtIndex = 0, int maxAttempts = 100)
-		{
-			return GetWalletHDKeyPathForSegwitAddressAsync(rootKeyPath, segwitAddress, network, startAtIndex, maxAttempts).GetAwaiter().GetResult();
 		}
 
 		public async Task<KeyPath> GetWalletHDKeyPathForSegwitAddressAsync(KeyPath rootKeyPath, string segwitAddress, Network network, int startAtIndex = 0, int? maxAttempts = null, CancellationToken cancellationToken = default(CancellationToken))
@@ -169,7 +147,7 @@ namespace LedgerWallet
 			}
 			// Locktime
 			apdus.Add(CreateAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_TRUSTED_INPUT, (byte)0x80, (byte)0x00, transaction.LockTime.ToBytes()));
-			byte[] response = await ExchangeApdus(apdus.ToArray(), OK).ConfigureAwait(false);
+			byte[] response = await ExchangeApdusAsync(apdus.ToArray(), OK).ConfigureAwait(false);
 			return new TrustedInput(response);
 		}
 
@@ -277,11 +255,7 @@ namespace LedgerWallet
 			}
 			return apdus.ToArray();
 		}
-		public Transaction SignTransaction(KeyPath keyPath, ICoin[] signedCoins, Transaction[] parents, Transaction transaction, KeyPath changePath = null)
-		{
-			return SignTransactionAsync(keyPath, signedCoins, parents, transaction, changePath).GetAwaiter().GetResult();
-		}
-		public Task<Transaction> SignTransactionAsync(KeyPath keyPath, ICoin[] signedCoins, Transaction[] parents, Transaction transaction, KeyPath changePath = null)
+		public async Task<Transaction> SignTransactionAsync(KeyPath keyPath, ICoin[] signedCoins, Transaction[] parents, Transaction transaction, KeyPath changePath = null)
 		{
 			List<SignatureRequest> requests = new List<SignatureRequest>();
 			foreach(var c in signedCoins)
@@ -295,12 +269,9 @@ namespace LedgerWallet
 						KeyPath = keyPath
 					});
 			}
-			return SignTransactionAsync(requests.ToArray(), transaction, changePath: changePath);
+			return await SignTransactionAsync(requests.ToArray(), transaction, changePath: changePath);
 		}
-		public Transaction SignTransaction(SignatureRequest[] signatureRequests, Transaction transaction, KeyPath changePath = null)
-		{
-			return SignTransactionAsync(signatureRequests, transaction, changePath).GetAwaiter().GetResult();
-		}
+
 		public async Task<Transaction> SignTransactionAsync(SignatureRequest[] signatureRequests, Transaction transaction, KeyPath changePath = null)
 		{
 			if(signatureRequests.Length == 0)
@@ -363,7 +334,7 @@ namespace LedgerWallet
 				}
 				apdus.Add(UntrustedHashSign(sigRequest.KeyPath, null, transaction.LockTime, SigHash.All));
 			}
-			var responses = await Exchange(apdus.ToArray()).ConfigureAwait(false);
+			var responses = await ExchangeAsync(apdus.ToArray()).ConfigureAwait(false);
 			foreach(var response in responses)
 				if(response.Response.Length > 10) //Probably a signature
 					response.Response[0] = 0x30;
