@@ -129,8 +129,8 @@ namespace LedgerWallet.Transports
 			.FirstOrDefault(hid => hid.DevicePath == _DevicePath);
 			if(newDevice == null)
 				return false;
-			_Device = newDevice;
-			if(!_Device.IsOpen)
+			_Device = new WindowsHidDevice(newDevice);
+			if(!await _Device.GetIsConnectedAsync())
 				_Device.OpenDevice();
 			await InitAsync();
 			return true;
