@@ -124,10 +124,28 @@ namespace LedgerWallet.Transports
 		{
 		}
 
+        internal static
+#if (!NETSTANDARD2_0)
+			unsafe 
+#endif
+            IEnumerable<DeviceInformation> EnumerateIHidDevices(IEnumerable<VendorProductIds> vendorProductIds, params UsageSpecification[] acceptedUsages)
+        {
+            List<DeviceInformation> devices = new List<DeviceInformation>();
 
+            var collection = WindowsHidDevice.GetConnectedDeviceInformations();
+            foreach (var vendorProductId in vendorProductIds)
+            {
+                devices.AddRange(collection.Where(d => d.VendorId == vendorProductId.VendorId && d.ProductId == vendorProductId.ProductId));
+            }
 
+            return devices
+                .Where(d =>
+                acceptedUsages == null ||
+                acceptedUsages.Length == 0 ||
+                acceptedUsages.Any(u => d.UsagePage == u.UsagePage && d.Usage == u.Usage));
+        }
 
-		const uint MAX_BLOCK = 64;
+        const uint MAX_BLOCK = 64;
 		const int DEFAULT_TIMEOUT = 20000;
 
 		internal async Task<byte[][]> ExchangeCoreAsync(byte[][] apdus)
