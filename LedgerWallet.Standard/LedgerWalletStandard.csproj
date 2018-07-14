@@ -32,15 +32,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Hid.Net" Version="1.1.2" />
     <PackageReference Include="NBitcoin" Version="4.1.1.25" />
   </ItemGroup>
 
   <ItemGroup>
     <Folder Include="Transports\" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\..\hid.net\Hid.Net\Hid.Net.csproj" />
   </ItemGroup>
 
 </Project>
