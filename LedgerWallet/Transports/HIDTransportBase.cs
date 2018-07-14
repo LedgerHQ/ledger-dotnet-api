@@ -125,7 +125,7 @@ namespace LedgerWallet.Transports
 		}
 
 #if(!NETSTANDARD2_0)
-		internal static unsafe IEnumerable<DeviceInformation> EnumerateIHidDevices(IEnumerable<VendorProductIds> vendorProductIds, params UsageSpecification[] acceptedUsages)
+		internal static unsafe IEnumerable<DeviceInformation> EnumerateHIDDevices(IEnumerable<VendorProductIds> vendorProductIds, params UsageSpecification[] acceptedUsages)
 		{
 			List<DeviceInformation> devices = new List<DeviceInformation>();
 
