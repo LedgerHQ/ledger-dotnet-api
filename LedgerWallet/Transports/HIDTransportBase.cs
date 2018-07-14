@@ -33,6 +33,9 @@ namespace LedgerWallet.Transports
 	public abstract class HIDTransportBase : ILedgerTransport
 	{
 		internal IHidDevice _Device;
+#if(!NETSTANDARD2_0)
+		readonly string _DevicePath;
+#endif
 		readonly VendorProductIds _VendorProductIds;
 
 		[DllImport("kernel32.dll", SetLastError = true)]
@@ -64,6 +67,9 @@ namespace LedgerWallet.Transports
 			//	device.OpenDevice();
 
 			_Device = device;
+#if(!NETSTANDARD2_0)
+			_DevicePath = ((WindowsHidDevice)device).DevicePath;
+#endif
 			_VendorProductIds = new VendorProductIds(device.VendorId, device.ProductId);
 			_AcceptedUsageSpecifications = acceptedUsageSpecifications;
 			ReadTimeout = TimeSpan.FromMilliseconds(DEFAULT_TIMEOUT);
@@ -72,6 +78,15 @@ namespace LedgerWallet.Transports
 		UsageSpecification[] _AcceptedUsageSpecifications;
 
 		bool needInit = true;
+#if(!NETSTANDARD2_0)
+		public string DevicePath
+		{
+			get
+			{
+				return _DevicePath;
+			}
+		}
+#endif
 
 		//Note: DevicePath has been removed because it is specific to the Windows platform
 		//To get the DevicePath, cast the IHidDevice as WindowsHidDevice and get it from the attributes
