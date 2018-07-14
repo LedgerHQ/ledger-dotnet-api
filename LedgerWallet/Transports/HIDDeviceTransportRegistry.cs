@@ -7,10 +7,10 @@ using System.Threading.Tasks;
 
 namespace LedgerWallet.Transports
 {
-	public class IHidDeviceTransportRegistry<T> where T : HIDTransportBase
+	public class HidDeviceTransportRegistry<T> where T : HIDTransportBase
 	{
 		Func<IHidDevice, T> create;
-		public IHidDeviceTransportRegistry(Func<IHidDevice, T> create)
+		public HidDeviceTransportRegistry(Func<IHidDevice, T> create)
 		{
 			this.create = create;
 		}
