@@ -187,6 +187,7 @@ namespace LedgerWallet.U2F
 		{
 		}
 
+#if(!NETSTANDARD2_0)
 		public static IEnumerable<U2FClient> GetHIDU2F()
 		{
 			var ledgers = HIDU2FTransport.GetHIDTransports()
@@ -194,7 +195,7 @@ namespace LedgerWallet.U2F
 							.ToList();
 			return ledgers;
 		}
-
+#endif
 		public U2FRegistrationResponse Register(AppId applicationId, CancellationToken cancellationToken = default(CancellationToken))
 		{
 			return RegisterAsync(applicationId, cancellationToken).GetAwaiter().GetResult();

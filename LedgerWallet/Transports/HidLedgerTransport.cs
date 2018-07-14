@@ -53,16 +53,14 @@ namespace LedgerWallet.Transports
 			_Registry = new IHidDeviceTransportRegistry<HIDLedgerTransport>(d => new HIDLedgerTransport(d));
 		}
 
-		static UsageSpecification[] _UsageSpecification = new[] { new UsageSpecification(0xffa0, 0x01) };
-		public static
 #if(!NETSTANDARD2_0)
-			unsafe 
-#endif
-			IEnumerable<HIDLedgerTransport> GetHIDTransports(IEnumerable<VendorProductIds> ids = null)
+		static UsageSpecification[] _UsageSpecification = new[] { new UsageSpecification(0xffa0, 0x01) };
+		public static unsafe IEnumerable<HIDLedgerTransport> GetHIDTransports(IEnumerable<VendorProductIds> ids = null)
 		{
 			ids = ids ?? WellKnownLedgerWallets;
 			return _Registry.GetHIDTransports(ids, _UsageSpecification);
 		}
+#endif
 
 		const int DEFAULT_LEDGER_CHANNEL = 0x0101;
 		const int LEDGER_HID_PACKET_SIZE = 64;

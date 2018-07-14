@@ -21,6 +21,7 @@ namespace LedgerWallet
 		public LedgerClient(ILedgerTransport transport) : base(transport)
 		{
 		}
+#if(!NETSTANDARD2_0)
 		public static IEnumerable<LedgerClient> GetHIDLedgers()
 		{
 			var ledgers = HIDLedgerTransport.GetHIDTransports()
@@ -28,6 +29,7 @@ namespace LedgerWallet
 							.ToList();
 			return ledgers;
 		}
+#endif
 
 		public async Task<LedgerWalletFirmware> GetFirmwareVersionAsync()
 		{

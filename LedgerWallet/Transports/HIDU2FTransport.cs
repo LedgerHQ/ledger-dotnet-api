@@ -134,16 +134,14 @@ namespace LedgerWallet.Transports
 			}
 		}
 
-		static UsageSpecification[] _UsageSpecification = new[] { new UsageSpecification(0xf1d0, 0x01) };
-		public static
 #if(!NETSTANDARD2_0)
-			unsafe 
-#endif
-			IEnumerable<HIDU2FTransport> GetHIDTransports(IEnumerable<VendorProductIds> ids = null)
+		static UsageSpecification[] _UsageSpecification = new[] { new UsageSpecification(0xf1d0, 0x01) };
+		public static unsafe IEnumerable<HIDU2FTransport> GetHIDTransports(IEnumerable<VendorProductIds> ids = null)
 		{
 			ids = ids ?? WellKnownU2F;
 			return _Registry.GetHIDTransports(ids, _UsageSpecification);
 		}
+#endif
 
 		protected override byte[] WrapCommandAPDU(Stream command, ref int sequenceIdx)
 		{
