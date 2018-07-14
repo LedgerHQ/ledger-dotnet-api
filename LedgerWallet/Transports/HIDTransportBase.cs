@@ -63,8 +63,9 @@ namespace LedgerWallet.Transports
 		protected HIDTransportBase(IHidDevice device, UsageSpecification[] acceptedUsageSpecifications)
 		{
 #if(!NETSTANDARD2_0)
-			if(!device.IsOpen)
-				device.OpenDevice();
+			var windowsHidDevice = device as WindowsHidDevice;
+			if(!windowsHidDevice.IsInitialized)
+				windowsHidDevice.Initialize();
 
 			_DevicePath = ((WindowsHidDevice)device).DevicePath;
 #endif
@@ -131,7 +132,10 @@ namespace LedgerWallet.Transports
 				return false;
 			_Device = new WindowsHidDevice(newDevice);
 			if(!await _Device.GetIsConnectedAsync())
-				_Device.OpenDevice();
+			{
+				var windowsHidDevice = _Device as WindowsHidDevice;
+				windowsHidDevice.Initialize();
+			}
 			await InitAsync();
 			return true;
 		}
