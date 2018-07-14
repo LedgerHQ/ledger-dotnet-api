@@ -15,14 +15,22 @@ namespace LedgerWallet.Transports
 			this.create = create;
 		}
 
-		public unsafe IEnumerable<T> GetHIDTransports(IEnumerable<VendorProductIds> ids, params UsageSpecification[] acceptedUsages)
+		public
+#if(!NETSTANDARD2_0)
+			unsafe 
+#endif
+			IEnumerable<T> GetHIDTransports(IEnumerable<VendorProductIds> ids, params UsageSpecification[] acceptedUsages)
 		{
 			return EnumerateIHidDevices(ids, acceptedUsages)
 							.Select(d => GetTransport(d))
 							.ToList();
 		}
 
-		internal static unsafe IEnumerable<DeviceInformation> EnumerateIHidDevices(IEnumerable<VendorProductIds> vendorProductIds, params UsageSpecification[] acceptedUsages)
+		internal static
+#if(!NETSTANDARD2_0)
+			unsafe 
+#endif
+			IEnumerable<DeviceInformation> EnumerateIHidDevices(IEnumerable<VendorProductIds> vendorProductIds, params UsageSpecification[] acceptedUsages)
 		{
 			List<DeviceInformation> devices = new List<DeviceInformation>();
 

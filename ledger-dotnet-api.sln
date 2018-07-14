@@ -8,6 +8,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LedgerWallet.Tests", "Ledge
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Hid.Net", "..\hid.net\Hid.Net\Hid.Net.csproj", "{CE7B2908-0753-4553-8DD7-F7C760724F2E}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LedgerWalletStandard", "LedgerWallet.Standard\LedgerWalletStandard.csproj", "{9DFD0590-C56F-48D3-BF90-96942CC81738}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -54,6 +56,18 @@ Global
 		{CE7B2908-0753-4553-8DD7-F7C760724F2E}.Release|x64.Build.0 = Release|Any CPU
 		{CE7B2908-0753-4553-8DD7-F7C760724F2E}.Release|x86.ActiveCfg = Release|Any CPU
 		{CE7B2908-0753-4553-8DD7-F7C760724F2E}.Release|x86.Build.0 = Release|Any CPU
+		{9DFD0590-C56F-48D3-BF90-96942CC81738}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9DFD0590-C56F-48D3-BF90-96942CC81738}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9DFD0590-C56F-48D3-BF90-96942CC81738}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{9DFD0590-C56F-48D3-BF90-96942CC81738}.Debug|x64.Build.0 = Debug|Any CPU
+		{9DFD0590-C56F-48D3-BF90-96942CC81738}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{9DFD0590-C56F-48D3-BF90-96942CC81738}.Debug|x86.Build.0 = Debug|Any CPU
+		{9DFD0590-C56F-48D3-BF90-96942CC81738}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9DFD0590-C56F-48D3-BF90-96942CC81738}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9DFD0590-C56F-48D3-BF90-96942CC81738}.Release|x64.ActiveCfg = Release|Any CPU
+		{9DFD0590-C56F-48D3-BF90-96942CC81738}.Release|x64.Build.0 = Release|Any CPU
+		{9DFD0590-C56F-48D3-BF90-96942CC81738}.Release|x86.ActiveCfg = Release|Any CPU
+		{9DFD0590-C56F-48D3-BF90-96942CC81738}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
