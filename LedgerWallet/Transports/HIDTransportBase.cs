@@ -124,23 +124,7 @@ namespace LedgerWallet.Transports
 		{
 		}
 
-		internal static unsafe IEnumerable<IHidDevice> EnumerateIHidDevices(IEnumerable<VendorProductIds> vendorProductIds, params UsageSpecification[] acceptedUsages)
-		{
-			List<IHidDevice> devices = new List<IHidDevice>();
-			foreach(var ids in vendorProductIds)
-			{
-				if(ids.ProductId == null)
-					devices.AddRange(IHidDevices.Enumerate(ids.VendorId));
-				else
-					devices.AddRange(IHidDevices.Enumerate(ids.VendorId, ids.ProductId.Value));
 
-			}
-			return devices
-				.Where(d =>
-				acceptedUsages == null ||
-				acceptedUsages.Length == 0 ||
-				acceptedUsages.Any(u => (ushort)d.Capabilities.UsagePage == u.UsagePage && (ushort)d.Capabilities.Usage == u.Usage));
-		}
 
 
 		const uint MAX_BLOCK = 64;

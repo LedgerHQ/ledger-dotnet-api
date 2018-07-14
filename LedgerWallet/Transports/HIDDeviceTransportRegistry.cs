@@ -16,13 +16,30 @@ namespace LedgerWallet.Transports
 		}
 		public unsafe IEnumerable<T> GetHIDTransports(IEnumerable<VendorProductIds> ids, params UsageSpecification[] acceptedUsages)
 		{
-			return HIDTransportBase.EnumerateIHidDevices(ids, acceptedUsages)
+			return WindowsDevice.EnumerateIHidDevices(ids, acceptedUsages)
 							.Select(d => GetTransport(d))
 							.ToList();
 		}
 
+		internal static unsafe IEnumerable<DeviceInformation> EnumerateIHidDevices(IEnumerable<VendorProductIds> vendorProductIds, params UsageSpecification[] acceptedUsages)
+		{
+			List<DeviceInformation> devices = new List<DeviceInformation>();
+
+			var collection = WindowsHidDevice.GetConnectedDeviceInformations();
+			foreach(var vendorProductId in vendorProductIds)
+			{
+				devices.AddRange(collection.Where(d => d.VendorId == vendorProductId.VendorId && d.ProductId == vendorProductId.ProductId));
+			}
+
+			return devices
+				.Where(d =>
+				acceptedUsages == null ||
+				acceptedUsages.Length == 0 ||
+				acceptedUsages.Any(u => d.UsagePage == u.UsagePage && d.Usage == u.Usage));
+		}
+
 		Dictionary<string, T> _TransportsByDevicePath = new Dictionary<string, T>();
-		private T GetTransport(IHidDevice device)
+		private T GetTransport(DeviceInformation device)
 		{
 			lock(_TransportsByDevicePath)
 			{
