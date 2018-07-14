@@ -136,8 +136,9 @@ namespace LedgerWallet.Transports
 			}
 		}
 
-#if(!NETSTANDARD2_0)
 		static UsageSpecification[] _UsageSpecification = new[] { new UsageSpecification(0xf1d0, 0x01) };
+
+#if(!NETSTANDARD2_0)
 		public static unsafe IEnumerable<HIDU2FTransport> GetHIDTransports(IEnumerable<VendorProductIds> ids = null)
 		{
 			ids = ids ?? WellKnownU2F;
