@@ -14,9 +14,10 @@ namespace LedgerWallet.Transports
 		{
 			this.create = create;
 		}
+
 		public unsafe IEnumerable<T> GetHIDTransports(IEnumerable<VendorProductIds> ids, params UsageSpecification[] acceptedUsages)
 		{
-			return WindowsDevice.EnumerateIHidDevices(ids, acceptedUsages)
+			return EnumerateIHidDevices(ids, acceptedUsages)
 							.Select(d => GetTransport(d))
 							.ToList();
 		}
@@ -47,7 +48,8 @@ namespace LedgerWallet.Transports
 				var uniqueId = string.Format("[{0},{1}]", device.VendorId, device.ProductId);
 				if(_TransportsByDevicePath.TryGetValue(uniqueId, out transport))
 					return transport;
-				transport = create(device);
+				var windowsHidDevice = new WindowsHidDevice(device);
+				transport = create(windowsHidDevice);
 				_TransportsByDevicePath.Add(uniqueId, transport);
 				return transport;
 			}
