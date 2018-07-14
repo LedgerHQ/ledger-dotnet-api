@@ -236,28 +236,29 @@ namespace LedgerWallet.Transports
 		{
 			var bytes = new byte[length];
 			Array.Copy(buffer, offset, bytes, 0, length);
-			var result = await hid_read_timeout(bytes, (uint)length);
+			var result = await hid_read_timeout(bytes, length);
 			Array.Copy(bytes, 0, buffer, offset, length);
 			return result;
 		}
 
-
-
 		internal async Task<int> hid_read_timeout(byte[] buffer, uint length)
 		{
-			var result = await this._Device.ReadAsync();
-			if(result.Length - 1 > length)
-				return -1;
-			Array.Copy(result, 1, buffer, 0, length);
+			//Note: this method used to read 64 bytes and shift that right in to an array of 65 bytes
+			//Android does this automatically, so, we can't do this here for compatibility with Android.
+			//See the flag DataHasExtraByte on WindowsHidDevice and UWPHidDevice
+
+			var result = await _Device.ReadAsync();
+			Array.Copy(result, 0, buffer, 0, length);
 			return result.Length;
 		}
 
 		internal async Task<int> hid_write(byte[] buffer, int length)
 		{
-			byte[] sent = new byte[length + 1];
-			Array.Copy(buffer, 0, sent, 1, length);
-			await this._Device.WriteAsync(sent);
-			Array.Copy(sent, 0, buffer, 0, length);
+			//Note: this method used to take 64 bytes and shift that right in to an array of 65 bytes and then write to the device
+			//Android does this automatically, so, we can't do this here for compatibility with Android.
+			//See the flag DataHasExtraByte on WindowsHidDevice and UWPHidDevice
+
+			await _Device.WriteAsync(buffer);
 			return length;
 		}
 	}
