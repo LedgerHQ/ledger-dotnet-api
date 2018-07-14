@@ -47,13 +47,13 @@ namespace LedgerWallet.Transports
 		{
 		}
 
+#if(!NETSTANDARD2_0)
 		static readonly HIDDeviceTransportRegistry<HIDLedgerTransport> _Registry;
 		static HIDLedgerTransport()
 		{
 			_Registry = new HIDDeviceTransportRegistry<HIDLedgerTransport>(d => new HIDLedgerTransport(d));
 		}
 
-#if(!NETSTANDARD2_0)
 		static UsageSpecification[] _UsageSpecification = new[] { new UsageSpecification(0xffa0, 0x01) };
 		public static unsafe IEnumerable<HIDLedgerTransport> GetHIDTransports(IEnumerable<VendorProductIds> ids = null)
 		{

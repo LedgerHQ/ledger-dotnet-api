@@ -15,14 +15,12 @@ namespace LedgerWallet.Transports
 			this.create = create;
 		}
 
-#if(!NETSTANDARD2_0)
 		public unsafe IEnumerable<T> GetHIDTransports(IEnumerable<VendorProductIds> ids, params UsageSpecification[] acceptedUsages)
 		{
 			return HIDTransportBase.EnumerateHIDDevices(ids, acceptedUsages)
 							.Select(d => GetTransport(d))
 							.ToList();
 		}
-#endif
 
 		Dictionary<string, T> _TransportsByDevicePath = new Dictionary<string, T>();
 		private T GetTransport(DeviceInformation device)

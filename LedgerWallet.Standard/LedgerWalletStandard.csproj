@@ -20,8 +20,6 @@
     <Compile Include="..\LedgerWallet\Serializer.cs" Link="Serializer.cs" />
     <Compile Include="..\LedgerWallet\SetupResponse.cs" Link="SetupResponse.cs" />
     <Compile Include="..\LedgerWallet\SignatureRequest.cs" Link="SignatureRequest.cs" />
-    <Compile Include="..\LedgerWallet\Transports\DisposableLock.cs" Link="Transports\DisposableLock.cs" />
-    <Compile Include="..\LedgerWallet\Transports\HIDDeviceTransportRegistry.cs" Link="Transports\HIDDeviceTransportRegistry.cs" />
     <Compile Include="..\LedgerWallet\Transports\HidLedgerTransport.cs" Link="Transports\HidLedgerTransport.cs" />
     <Compile Include="..\LedgerWallet\Transports\HIDTransportBase.cs" Link="Transports\HIDTransportBase.cs" />
     <Compile Include="..\LedgerWallet\Transports\HIDU2FTransport.cs" Link="Transports\HIDU2FTransport.cs" />
