@@ -101,10 +101,10 @@ namespace LedgerWallet.Transports
 			ReadTimeout = TimeSpan.FromSeconds(0.5);
 		}
 
-		static readonly HidDeviceTransportRegistry<HIDU2FTransport> _Registry;
+		static readonly HIDDeviceTransportRegistry<HIDU2FTransport> _Registry;
 		static HIDU2FTransport()
 		{
-			_Registry = new HidDeviceTransportRegistry<HIDU2FTransport>(d => new HIDU2FTransport(d));
+			_Registry = new HIDDeviceTransportRegistry<HIDU2FTransport>(d => new HIDU2FTransport(d));
 		}
 
 		protected async override Task InitAsync()

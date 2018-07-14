@@ -47,10 +47,10 @@ namespace LedgerWallet.Transports
 		{
 		}
 
-		static readonly HidDeviceTransportRegistry<HIDLedgerTransport> _Registry;
+		static readonly HIDDeviceTransportRegistry<HIDLedgerTransport> _Registry;
 		static HIDLedgerTransport()
 		{
-			_Registry = new HidDeviceTransportRegistry<HIDLedgerTransport>(d => new HIDLedgerTransport(d));
+			_Registry = new HIDDeviceTransportRegistry<HIDLedgerTransport>(d => new HIDLedgerTransport(d));
 		}
 
 #if(!NETSTANDARD2_0)
