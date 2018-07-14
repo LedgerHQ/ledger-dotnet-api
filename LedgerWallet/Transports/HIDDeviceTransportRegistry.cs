@@ -30,7 +30,7 @@ namespace LedgerWallet.Transports
 			lock(_TransportsByDevicePath)
 			{
 				T transport = null;
-				var uniqueId = string.Format("[{0},{1}]", device.VendorId, device.ProductId);
+				var uniqueId = string.Format("[{0},{1}]{2}", device.VendorId, device.ProductId, device.DevicePath);
 				if(_TransportsByDevicePath.TryGetValue(uniqueId, out transport))
 					return transport;
 				var windowsHidDevice = new WindowsHidDevice(device);
