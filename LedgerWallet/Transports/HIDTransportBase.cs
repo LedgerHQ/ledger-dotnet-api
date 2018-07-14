@@ -62,14 +62,14 @@ namespace LedgerWallet.Transports
 
 		protected HIDTransportBase(IHidDevice device, UsageSpecification[] acceptedUsageSpecifications)
 		{
-			//TODO
-			//if(!device.IsOpen)
-			//	device.OpenDevice();
-
-			_Device = device;
 #if(!NETSTANDARD2_0)
+			if(!device.IsOpen)
+				device.OpenDevice();
+
 			_DevicePath = ((WindowsHidDevice)device).DevicePath;
 #endif
+			_Device = device;
+
 			_VendorProductIds = new VendorProductIds(device.VendorId, device.ProductId);
 			_AcceptedUsageSpecifications = acceptedUsageSpecifications;
 			ReadTimeout = TimeSpan.FromMilliseconds(DEFAULT_TIMEOUT);
@@ -88,9 +88,6 @@ namespace LedgerWallet.Transports
 		}
 #endif
 
-		//Note: DevicePath has been removed because it is specific to the Windows platform
-		//To get the DevicePath, cast the IHidDevice as WindowsHidDevice and get it from the attributes
-
 		protected SemaphoreSlim _SemaphoreSlim = new SemaphoreSlim(1, 1)
 ;
 		bool initializing = false;
@@ -105,35 +102,40 @@ namespace LedgerWallet.Transports
 			}
 			var response = await ExchangeCoreAsync(apdus).ConfigureAwait(false);
 
-			//TODO
-			//if(response == null)
-			//{
-			//	if(!await RenewTransportAsync())
-			//	{
-			//		throw new LedgerWalletException("Ledger disconnected");
-			//	}
-			//	response = await ExchangeCoreAsync(apdus).ConfigureAwait(false);
-			//	if(response == null)
-			//		throw new LedgerWalletException("Error while transmission");
-			//}
+			if(response == null)
+			{
+#if(!NETSTANDARD2_0)
+				if(!await RenewTransportAsync())
+				{
+					throw new LedgerWalletException("Ledger disconnected");
+				}
+#endif
+
+				response = await ExchangeCoreAsync(apdus).ConfigureAwait(false);
+				if(response == null)
+					throw new LedgerWalletException("Error while transmission");
+			}
+
 			return response;
 		}
 
-		//async Task<bool> RenewTransportAsync()
-		//{
-		//	var newDevice = EnumerateIHidDevices(new[]
-		//	{
-		//		this._VendorProductIds
-		//	}, _AcceptedUsageSpecifications)
-		//	.FirstOrDefault(hid => hid.DevicePath == _DevicePath);
-		//	if(newDevice == null)
-		//		return false;
-		//	_Device = newDevice;
-		//	if(!_Device.IsOpen)
-		//		_Device.OpenDevice();
-		//	await InitAsync();
-		//	return true;
-		//}
+#if(!NETSTANDARD2_0)
+		async Task<bool> RenewTransportAsync()
+		{
+			var newDevice = EnumerateHIDDevices(new[]
+			{
+				this._VendorProductIds
+			}, _AcceptedUsageSpecifications)
+			.FirstOrDefault(hid => hid.DevicePath == _DevicePath);
+			if(newDevice == null)
+				return false;
+			_Device = newDevice;
+			if(!_Device.IsOpen)
+				_Device.OpenDevice();
+			await InitAsync();
+			return true;
+		}
+#endif
 
 		protected async virtual Task InitAsync()
 		{
