@@ -18,7 +18,6 @@ namespace LedgerWallet
 		}
 
 #if(!NETSTANDARD2_0)
-
 		public static new IEnumerable<LegacyLedgerClient> GetHIDLedgers()
 		{
 			var ledgers = HIDLedgerTransport.GetHIDTransports()
