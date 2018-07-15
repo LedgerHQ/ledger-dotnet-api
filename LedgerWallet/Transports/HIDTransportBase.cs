@@ -106,11 +106,13 @@ namespace LedgerWallet.Transports
 			if(response == null)
 			{
 #if(!NETSTANDARD2_0)
+
 				if(!await RenewTransportAsync())
 				{
 					throw new LedgerWalletException("Ledger disconnected");
 				}
 #endif
+
 				response = await ExchangeCoreAsync(apdus).ConfigureAwait(false);
 				if(response == null)
 					throw new LedgerWalletException("Error while transmission");
@@ -135,6 +137,7 @@ namespace LedgerWallet.Transports
 				var windowsHidDevice = _Device as WindowsHidDevice;
 				windowsHidDevice.Initialize();
 			}
+
 			await InitAsync();
 			return true;
 		}

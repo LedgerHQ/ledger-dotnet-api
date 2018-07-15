@@ -102,9 +102,9 @@ namespace LedgerWallet.Tests
 				},
 			};
 
-			if(segwit)
+			if (segwit)
 			{
-				foreach(var req in requests)
+				foreach (var req in requests)
 					req.InputTransaction = null;
 			}
 
