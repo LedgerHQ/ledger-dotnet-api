@@ -151,16 +151,22 @@ namespace LedgerWallet.Transports
 			List<DeviceInformation> devices = new List<DeviceInformation>();
 
 			var collection = WindowsHidDevice.GetConnectedDeviceInformations();
-			foreach(var vendorProductId in vendorProductIds)
-			{
-				devices.AddRange(collection.Where(d => d.VendorId == vendorProductId.VendorId && d.ProductId == vendorProductId.ProductId));
-			}
 
-			return devices
+			foreach(var ids in vendorProductIds)
+			{
+				if(ids.ProductId == null)
+					devices.AddRange(collection.Where(c => c.VendorId == ids.VendorId));
+				else
+					devices.AddRange(collection.Where(c => c.VendorId == ids.VendorId && c.ProductId == ids.ProductId));
+
+			}
+			var retVal = devices
 				.Where(d =>
 				acceptedUsages == null ||
 				acceptedUsages.Length == 0 ||
-				acceptedUsages.Any(u => d.UsagePage == u.UsagePage && d.Usage == u.Usage));
+				acceptedUsages.Any(u => d.UsagePage == u.UsagePage && d.Usage == u.Usage)).ToList();
+
+			return retVal;
 		}
 #endif
 
