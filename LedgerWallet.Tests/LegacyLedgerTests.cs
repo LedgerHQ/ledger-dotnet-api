@@ -122,7 +122,7 @@ namespace LedgerWallet.Tests
 
 		private static LegacyLedgerClient GetLedger()
 		{
-#if(!NETSTANDARD2_0)
+#if(!NETCOREAPP2_0)
 			var ledger = LegacyLedgerClient.GetHIDLedgers().FirstOrDefault();
 			return ledger;
 #else

@@ -166,7 +166,7 @@ namespace LedgerWallet.Tests
 			await Task.WhenAll(tasks);
 		}
 
-#if(!NETSTANDARD2_0)
+#if(!NETCOREAPP2_0)
 		public async static Task<LedgerClientBase> GetLedgerAsync(LedgerType ledgerType)
 		{
 			return LedgerClient.GetHIDLedgers().First();
