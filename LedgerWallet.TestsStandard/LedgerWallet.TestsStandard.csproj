@@ -22,7 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\LedgerWallet\LedgerWallet.csproj" />
+    <ProjectReference Include="..\LedgerWallet.Standard\LedgerWalletStandard.csproj" />
   </ItemGroup>
 
 </Project>
