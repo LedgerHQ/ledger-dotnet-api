@@ -38,13 +38,13 @@ namespace LedgerWallet
 
 			var response = await ExchangeSingleAPDUAsync(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_VERIFY_PIN, 0, 0, pin.ToBytes());
 
-			if(response.SW == LedgerWalletConstants.SW_OK)
+			if (response.SW == LedgerWalletConstants.SW_OK)
 			{
 				retVal.IsSuccess = true;
 				return retVal;
 			}
 
-			if(response.SW == LedgerWalletConstants.SW_INS_NOT_SUPPORTED)
+			if (response.SW == LedgerWalletConstants.SW_INS_NOT_SUPPORTED)
 				Throw(response.SW);
 
 			retVal.Remaining = (response.SW & 0x0F);
