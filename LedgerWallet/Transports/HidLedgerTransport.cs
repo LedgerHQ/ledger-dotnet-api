@@ -1,4 +1,4 @@
-﻿using HidLibrary;
+﻿using Hid.Net;
 using LedgerWallet.Transports;
 using Microsoft.Win32.SafeHandles;
 using NBitcoin;
@@ -43,10 +43,11 @@ namespace LedgerWallet.Transports
 			new VendorProductIds(0x2581, 0x3b7c)
 		};
 
-		protected HIDLedgerTransport(HidDevice device) : base(device, null)
+		public HIDLedgerTransport(IHidDevice device) : base(device, null)
 		{
 		}
 
+#if(!NETSTANDARD2_0)
 		static readonly HIDDeviceTransportRegistry<HIDLedgerTransport> _Registry;
 		static HIDLedgerTransport()
 		{
@@ -59,7 +60,8 @@ namespace LedgerWallet.Transports
 			ids = ids ?? WellKnownLedgerWallets;
 			return _Registry.GetHIDTransports(ids, _UsageSpecification);
 		}
-		
+#endif
+
 		const int DEFAULT_LEDGER_CHANNEL = 0x0101;
 		const int LEDGER_HID_PACKET_SIZE = 64;
 

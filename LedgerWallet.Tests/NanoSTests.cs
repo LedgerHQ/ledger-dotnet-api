@@ -1,4 +1,6 @@
-﻿using LedgerWallet.Transports;
+﻿using Hid.Net;
+using LedgerWallet.Transports;
+using LedgerWallet.U2F;
 using NBitcoin;
 using NBitcoin.DataEncoders;
 using System;
@@ -24,7 +26,7 @@ namespace LedgerWallet.Tests
 
 			var tasks = new List<Task>();
 
-			for (int i = 0; i < 50; i++)
+			for( int i = 0; i < 50; i++)
 			{
 				tasks.Add(ledger.GetWalletPubKeyAsync(new KeyPath("1'/0")));
 				tasks.Add(ledger.GetFirmwareVersionAsync());
@@ -164,10 +166,44 @@ namespace LedgerWallet.Tests
 			await Task.WhenAll(tasks);
 		}
 
+#if(!NETCOREAPP2_0)
 		public async static Task<LedgerClientBase> GetLedgerAsync(LedgerType ledgerType)
 		{
 			return LedgerClient.GetHIDLedgers().First();
 		}
+#else
+		public async static Task<LedgerClientBase> GetLedgerAsync(LedgerType ledgerType)
+		{
+			var vid = (ushort)11415;
+			var devices = WindowsHidDevice.GetConnectedDeviceInformations();
+			var potentialDevices = devices.Where(d => d.VendorId == vid ).ToList();
+
+			var acceptedUsages = new[] { new UsageSpecification(65440, 0x01) };
+
+			var ledgerDeviceInformation = devices
+			.FirstOrDefault(d =>
+			acceptedUsages == null ||
+			acceptedUsages.Length == 0 ||
+			acceptedUsages.Any(u => d.UsagePage == u.UsagePage && d.Usage == u.Usage));
+
+			var windowsHidDevice = new WindowsHidDevice(ledgerDeviceInformation);
+			windowsHidDevice.DataHasExtraByte = true;
+			await windowsHidDevice.InitializeAsync();
+			var ledgerTransport = new HIDLedgerTransport(windowsHidDevice);
+
+			switch(ledgerType)
+			{
+				case LedgerType.Ledger:
+					return new LedgerClient(ledgerTransport);
+				case LedgerType.LegacyLedger:
+					return new LegacyLedgerClient(ledgerTransport);
+				case LedgerType.U2F:
+					return new U2FClient(ledgerTransport);
+				default:
+					throw new NotImplementedException();
+			}
+		}
+#endif
 
 		public enum LedgerType
 		{
