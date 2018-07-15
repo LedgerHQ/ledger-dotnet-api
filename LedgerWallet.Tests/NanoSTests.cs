@@ -26,7 +26,7 @@ namespace LedgerWallet.Tests
 
 			var tasks = new List<Task>();
 
-			for(int i = 0; i < 50; i++)
+			for( int i = 0; i < 50; i++)
 			{
 				tasks.Add(ledger.GetWalletPubKeyAsync(new KeyPath("1'/0")));
 				tasks.Add(ledger.GetFirmwareVersionAsync());
@@ -145,7 +145,7 @@ namespace LedgerWallet.Tests
 
 			var tasks = new List<Task>();
 
-			for(var i = 0; i < 5; i++)
+			for (var i = 0; i < 5; i++)
 			{
 				//should show 0.5 and 2.0 btc in fee
 				var signed = ledger.SignTransactionAsync(
