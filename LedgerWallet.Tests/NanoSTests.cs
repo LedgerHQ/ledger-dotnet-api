@@ -176,10 +176,9 @@ namespace LedgerWallet.Tests
 		{
 			var vid = (ushort)11415;
 			var devices = WindowsHidDevice.GetConnectedDeviceInformations();
-			var newDevice = devices.Where(d => d.VendorId == vid);
+			var potentialDevices = devices.Where(d => d.VendorId == vid ).ToList();
 
-
-			var acceptedUsages = new[] { new UsageSpecification(0xf1d0, 0x01) };
+			var acceptedUsages = new[] { new UsageSpecification(65440, 0x01) };
 
 			var ledgerDeviceInformation = devices
 			.FirstOrDefault(d =>
