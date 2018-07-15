@@ -176,8 +176,18 @@ namespace LedgerWallet.Tests
 		{
 			var vid = (ushort)11415;
 			var devices = WindowsHidDevice.GetConnectedDeviceInformations();
-			var newDevice = devices.Where(d => d.VendorId == vid).ToList()[0];
-			var windowsHidDevice = new WindowsHidDevice(newDevice);
+			var newDevice = devices.Where(d => d.VendorId == vid);
+
+
+			var acceptedUsages = new[] { new UsageSpecification(0xf1d0, 0x01) };
+
+			var ledgerDeviceInformation = devices
+			.FirstOrDefault(d =>
+			acceptedUsages == null ||
+			acceptedUsages.Length == 0 ||
+			acceptedUsages.Any(u => d.UsagePage == u.UsagePage && d.Usage == u.Usage));
+
+			var windowsHidDevice = new WindowsHidDevice(ledgerDeviceInformation);
 			windowsHidDevice.DataHasExtraByte = true;
 			await windowsHidDevice.InitializeAsync();
 			var ledgerTransport = new HIDLedgerTransport(windowsHidDevice);

@@ -111,7 +111,6 @@ namespace LedgerWallet.Transports
 					throw new LedgerWalletException("Ledger disconnected");
 				}
 #endif
-
 				response = await ExchangeCoreAsync(apdus).ConfigureAwait(false);
 				if(response == null)
 					throw new LedgerWalletException("Error while transmission");
