@@ -166,7 +166,7 @@ namespace LedgerWallet.Tests
             await Task.WhenAll(tasks);
         }
 
-#if(!NETCOREAPP2_0)
+
 		public static async Task<LedgerClientBase> GetLedgerAsync(LedgerType ledgerType  = LedgerType.Ledger)
 		{
             switch(ledgerType)
@@ -181,39 +181,39 @@ namespace LedgerWallet.Tests
                     throw new NotSupportedException();
             }
 		}
-#else
-        public async static Task<LedgerClientBase> GetLedgerAsync(LedgerType ledgerType = LedgerType.Ledger)
-        {
-            var vid = (ushort)11415;
-            var devices = WindowsHidDevice.GetConnectedDeviceInformations();
-            var potentialDevices = devices.Where(d => d.VendorId == vid).ToList();
 
-            var acceptedUsages = new[] { new UsageSpecification(65440, 0x01) };
+        //public async static Task<LedgerClientBase> GetLedgerAsync(LedgerType ledgerType = LedgerType.Ledger)
+        //{
+        //    var vid = (ushort)11415;
+        //    var devices = WindowsHidDevice.GetConnectedDeviceInformations();
+        //    var potentialDevices = devices.Where(d => d.VendorId == vid).ToList();
 
-            var ledgerDeviceInformation = devices
-            .FirstOrDefault(d =>
-            acceptedUsages == null ||
-            acceptedUsages.Length == 0 ||
-            acceptedUsages.Any(u => d.UsagePage == u.UsagePage && d.Usage == u.Usage));
+        //    var acceptedUsages = new[] { new UsageSpecification(65440, 0x01) };
 
-            var windowsHidDevice = new WindowsHidDevice(ledgerDeviceInformation);
-            windowsHidDevice.DataHasExtraByte = true;
-            await windowsHidDevice.InitializeAsync();
-            var ledgerTransport = new HIDLedgerTransport(windowsHidDevice);
+        //    var ledgerDeviceInformation = devices
+        //    .FirstOrDefault(d =>
+        //    acceptedUsages == null ||
+        //    acceptedUsages.Length == 0 ||
+        //    acceptedUsages.Any(u => d.UsagePage == u.UsagePage && d.Usage == u.Usage));
 
-            switch(ledgerType)
-            {
-                case LedgerType.Ledger:
-                    return new LedgerClient(ledgerTransport);
-                case LedgerType.LegacyLedger:
-                    return new LegacyLedgerClient(ledgerTransport);
-                case LedgerType.U2F:
-                    return new U2FClient(ledgerTransport);
-                default:
-                    throw new NotImplementedException();
-            }
-        }
-#endif
+        //    var windowsHidDevice = new WindowsHidDevice(ledgerDeviceInformation);
+        //    windowsHidDevice.DataHasExtraByte = true;
+        //    await windowsHidDevice.InitializeAsync();
+        //    var ledgerTransport = new HIDLedgerTransport(ledgerDeviceInformation.DevicePath, windowsHidDevice);
+
+        //    switch(ledgerType)
+        //    {
+        //        case LedgerType.Ledger:
+        //            return new LedgerClient(ledgerTransport);
+        //        case LedgerType.LegacyLedger:
+        //            return new LegacyLedgerClient(ledgerTransport);
+        //        case LedgerType.U2F:
+        //            return new U2FClient(ledgerTransport);
+        //        default:
+        //            throw new NotImplementedException();
+        //    }
+        //}
+
 
         public enum LedgerType
         {

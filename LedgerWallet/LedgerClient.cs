@@ -21,19 +21,14 @@ namespace LedgerWallet
 		public LedgerClient(ILedgerTransport transport) : base(transport)
 		{
 		}
-#if(!NETSTANDARD2_0)
-		public static IEnumerable<LedgerClient> GetHIDLedgers()
+
+		public static async Task<IEnumerable<LedgerClient>> GetHIDLedgersAsync()
 		{
-			var ledgers = HIDLedgerTransport.GetHIDTransports()
+			var ledgers = (await HIDLedgerTransport.GetHIDTransportsAsync())
 							.Select(t => new LedgerClient(t))
 							.ToList();
 			return ledgers;
 		}
-        public static Task<IEnumerable<LedgerClient>> GetHIDLedgersAsync()
-		{
-			return Task.FromResult<IEnumerable<LedgerClient>>(GetHIDLedgers());
-		}
-#endif
 
         public async Task<LedgerWalletFirmware> GetFirmwareVersionAsync()
 		{

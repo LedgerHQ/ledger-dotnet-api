@@ -43,28 +43,22 @@ namespace LedgerWallet.Transports
 			new VendorProductIds(0x2581, 0x3b7c)
 		};
 
-		public HIDLedgerTransport(IHidDevice device) : base(device, null)
+		public HIDLedgerTransport(string devicePath, IHidDevice device) : base(devicePath, device, null)
 		{
 		}
 
-#if(!NETSTANDARD2_0)
 		static readonly HIDDeviceTransportRegistry<HIDLedgerTransport> _Registry;
 		static HIDLedgerTransport()
 		{
-			_Registry = new HIDDeviceTransportRegistry<HIDLedgerTransport>(d => new HIDLedgerTransport(d));
+			_Registry = new HIDDeviceTransportRegistry<HIDLedgerTransport>((path, d) => new HIDLedgerTransport(path, d));
 		}
 
 		static UsageSpecification[] _UsageSpecification = new[] { new UsageSpecification(0xffa0, 0x01) };
-		public static unsafe IEnumerable<HIDLedgerTransport> GetHIDTransports(IEnumerable<VendorProductIds> ids = null)
+		public static Task<IEnumerable<HIDLedgerTransport>> GetHIDTransportsAsync(IEnumerable<VendorProductIds> ids = null)
 		{
 			ids = ids ?? WellKnownLedgerWallets;
-			return _Registry.GetHIDTransports(ids, _UsageSpecification);
+			return _Registry.GetHIDTransportsAsync(ids, _UsageSpecification);
 		}
-        public static Task<IEnumerable<HIDLedgerTransport>> GetHIDTransportsAsync(IEnumerable<VendorProductIds> ids = null)
-        {
-            return Task.FromResult<IEnumerable<HIDLedgerTransport>>(GetHIDTransports(ids));
-        }
-#endif
 
         const int DEFAULT_LEDGER_CHANNEL = 0x0101;
 		const int LEDGER_HID_PACKET_SIZE = 64;

@@ -33,42 +33,12 @@ namespace LedgerWallet.Transports
     public abstract class HIDTransportBase : ILedgerTransport
     {
         internal IHidDevice _Device;
-#if(!NETSTANDARD2_0)
 		readonly string _DevicePath;
-#endif
         readonly VendorProductIds _VendorProductIds;
 
-        [DllImport("kernel32.dll", SetLastError = true)]
-        static extern IntPtr LoadLibraryEx(string lpFileName, IntPtr hReservedNull, int dwFlags);
-
-        static HIDTransportBase()
+        protected HIDTransportBase(string devicePath, IHidDevice device, UsageSpecification[] acceptedUsageSpecifications)
         {
-            System.Reflection.Assembly myass = System.Reflection.Assembly.GetExecutingAssembly();
-            FileInfo fi = new FileInfo(myass.Location);
-            string folder = IntPtr.Size == 8 ? "x64" : "x86";
-            System.IntPtr moduleHandle = LoadLibraryEx(fi.Directory.FullName + "\\" + folder + "\\hidapi.dll", IntPtr.Zero, 0);
-            if(moduleHandle == IntPtr.Zero)
-            {
-                if(Marshal.GetLastWin32Error() != 0x7E)
-                    throw new Win32Exception();
-                moduleHandle = LoadLibraryEx(Directory.GetCurrentDirectory() + "\\" + folder + "\\hidapi.dll", IntPtr.Zero, 0);
-                if(moduleHandle == IntPtr.Zero)
-                {
-                    fi = new FileInfo(myass.CodeBase.Replace("file:///", ""));
-                    moduleHandle = LoadLibraryEx(fi.Directory.FullName + "\\" + folder + "\\hidapi.dll", IntPtr.Zero, 0);
-                }
-            }
-        }
-
-        protected HIDTransportBase(IHidDevice device, UsageSpecification[] acceptedUsageSpecifications)
-        {
-#if(!NETSTANDARD2_0)
-			var windowsHidDevice = device as WindowsHidDevice;
-			if(!windowsHidDevice.IsInitialized)
-				windowsHidDevice.Initialize();
-
-			_DevicePath = ((WindowsHidDevice)device).DevicePath;
-#endif
+            _DevicePath = devicePath;
             _Device = device;
 
             _VendorProductIds = new VendorProductIds(device.VendorId, device.ProductId);
@@ -79,7 +49,6 @@ namespace LedgerWallet.Transports
         UsageSpecification[] _AcceptedUsageSpecifications;
 
         bool needInit = true;
-#if(!NETSTANDARD2_0)
 		public string DevicePath
 		{
 			get
@@ -87,7 +56,6 @@ namespace LedgerWallet.Transports
 				return _DevicePath;
 			}
 		}
-#endif
 
         protected SemaphoreSlim _SemaphoreSlim = new SemaphoreSlim(1, 1);
         bool initializing = false;
@@ -104,12 +72,10 @@ namespace LedgerWallet.Transports
 
             if(response == null)
             {
-#if(!NETSTANDARD2_0)
 				if(!await RenewTransportAsync())
 				{
 					throw new LedgerWalletException("Ledger disconnected");
 				}
-#endif
                 response = await ExchangeCoreAsync(apdus).ConfigureAwait(false);
                 if(response == null)
                     throw new LedgerWalletException("Error while transmission");
@@ -118,7 +84,6 @@ namespace LedgerWallet.Transports
             return response;
         }
 
-#if(!NETSTANDARD2_0)
 		async Task<bool> RenewTransportAsync()
 		{
 			var newDevice = EnumerateHIDDevices(new[]
@@ -132,12 +97,11 @@ namespace LedgerWallet.Transports
 			if(!await _Device.GetIsConnectedAsync())
 			{
 				var windowsHidDevice = _Device as WindowsHidDevice;
-				windowsHidDevice.Initialize();
+				await windowsHidDevice.InitializeAsync();
 			}
 			await InitAsync();
 			return true;
 		}
-#endif
 
         protected virtual Task InitAsync()
         {
@@ -148,8 +112,7 @@ namespace LedgerWallet.Transports
 #endif
         }
 
-#if(!NETSTANDARD2_0)
-		internal static unsafe IEnumerable<DeviceInformation> EnumerateHIDDevices(IEnumerable<VendorProductIds> vendorProductIds, params UsageSpecification[] acceptedUsages)
+		internal static IEnumerable<DeviceInformation> EnumerateHIDDevices(IEnumerable<VendorProductIds> vendorProductIds, params UsageSpecification[] acceptedUsages)
 		{
 			List<DeviceInformation> devices = new List<DeviceInformation>();
 
@@ -171,7 +134,7 @@ namespace LedgerWallet.Transports
 
 			return retVal;
 		}
-#endif
+
 
         const uint MAX_BLOCK = 64;
         const int DEFAULT_TIMEOUT = 20000;

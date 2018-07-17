@@ -96,18 +96,16 @@ namespace LedgerWallet.Transports
 				new VendorProductIds(0x2c97, 0x0001),  // Nano S
 		};
 
-		protected HIDU2FTransport(IHidDevice device) : base(device, _UsageSpecification)
+		protected HIDU2FTransport(string devicePath, IHidDevice device) : base(devicePath, device, _UsageSpecification)
 		{
 			ReadTimeout = TimeSpan.FromSeconds(0.5);
 		}
 
-#if(!NETSTANDARD2_0)
 		static readonly HIDDeviceTransportRegistry<HIDU2FTransport> _Registry;
 		static HIDU2FTransport()
 		{
-			_Registry = new HIDDeviceTransportRegistry<HIDU2FTransport>(d => new HIDU2FTransport(d));
+			_Registry = new HIDDeviceTransportRegistry<HIDU2FTransport>((path, d) => new HIDU2FTransport(path, d));
 		}
-#endif
 
 		protected async override Task InitAsync()
 		{
@@ -138,13 +136,11 @@ namespace LedgerWallet.Transports
 
 		static UsageSpecification[] _UsageSpecification = new[] { new UsageSpecification(0xf1d0, 0x01) };
 
-#if(!NETSTANDARD2_0)
-		public static unsafe IEnumerable<HIDU2FTransport> GetHIDTransports(IEnumerable<VendorProductIds> ids = null)
+		public static Task<IEnumerable<HIDU2FTransport>> GetHIDTransportsAsync(IEnumerable<VendorProductIds> ids = null)
 		{
 			ids = ids ?? WellKnownU2F;
-			return _Registry.GetHIDTransports(ids, _UsageSpecification);
+			return _Registry.GetHIDTransportsAsync(ids, _UsageSpecification);
 		}
-#endif
 
 		protected override byte[] WrapCommandAPDU(Stream command, ref int sequenceIdx)
 		{
