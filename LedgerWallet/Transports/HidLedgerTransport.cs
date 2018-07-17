@@ -60,9 +60,13 @@ namespace LedgerWallet.Transports
 			ids = ids ?? WellKnownLedgerWallets;
 			return _Registry.GetHIDTransports(ids, _UsageSpecification);
 		}
+        public static Task<IEnumerable<HIDLedgerTransport>> GetHIDTransportsAsync(IEnumerable<VendorProductIds> ids = null)
+        {
+            return Task.FromResult<IEnumerable<HIDLedgerTransport>>(GetHIDTransports(ids));
+        }
 #endif
 
-		const int DEFAULT_LEDGER_CHANNEL = 0x0101;
+        const int DEFAULT_LEDGER_CHANNEL = 0x0101;
 		const int LEDGER_HID_PACKET_SIZE = 64;
 
 		protected override byte[] WrapCommandAPDU(Stream command, ref int sequenceIdx)

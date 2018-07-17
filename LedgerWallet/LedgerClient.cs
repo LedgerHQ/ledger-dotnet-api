@@ -29,9 +29,13 @@ namespace LedgerWallet
 							.ToList();
 			return ledgers;
 		}
+        public static Task<IEnumerable<LedgerClient>> GetHIDLedgersAsync()
+		{
+			return Task.FromResult<IEnumerable<LedgerClient>>(GetHIDLedgers());
+		}
 #endif
 
-		public async Task<LedgerWalletFirmware> GetFirmwareVersionAsync()
+        public async Task<LedgerWalletFirmware> GetFirmwareVersionAsync()
 		{
 			byte[] response = await ExchangeSingleAPDUAsync(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_FIRMWARE_VERSION, (byte)0x00, (byte)0x00, 0x00, OK).ConfigureAwait(false);
 			return new LedgerWalletFirmware(response);

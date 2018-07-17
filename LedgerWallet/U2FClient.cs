@@ -195,8 +195,14 @@ namespace LedgerWallet.U2F
 							.ToList();
 			return ledgers;
 		}
+        public static Task<IEnumerable<U2FClient>> GetHIDU2FAsync()
+		{
+			return Task.FromResult<IEnumerable<U2FClient>>(GetHIDU2F());
+		}
+#else
+
 #endif
-		public U2FRegistrationResponse Register(AppId applicationId, CancellationToken cancellationToken = default(CancellationToken))
+        public U2FRegistrationResponse Register(AppId applicationId, CancellationToken cancellationToken = default(CancellationToken))
 		{
 			return RegisterAsync(applicationId, cancellationToken).GetAwaiter().GetResult();
 		}
