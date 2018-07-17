@@ -169,7 +169,22 @@ namespace LedgerWallet.Tests
 #if(!NETCOREAPP2_0)
 		public static Task<LedgerClientBase> GetLedgerAsync(LedgerType ledgerType  = LedgerType.Ledger)
 		{
-			return Task.FromResult<LedgerClientBase>(LedgerClient.GetHIDLedgers().FirstOrDefault());
+            LedgerClientBase result;
+            switch(ledgerType)
+            {
+                case LedgerType.Ledger:
+                    result = LedgerClient.GetHIDLedgers().FirstOrDefault();
+                    break;
+                case LedgerType.LegacyLedger:
+                    result = LegacyLedgerClient.GetHIDLedgers().FirstOrDefault();
+                    break;
+                case LedgerType.U2F:
+                    result = U2FClient.GetHIDU2F().FirstOrDefault();
+                    break;
+                default:
+                    throw new NotSupportedException();
+            }
+			return Task.FromResult<LedgerClientBase>(result);
 		}
 #else
         public async static Task<LedgerClientBase> GetLedgerAsync(LedgerType ledgerType = LedgerType.Ledger)
