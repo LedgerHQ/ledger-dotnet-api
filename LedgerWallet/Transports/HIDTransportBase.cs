@@ -43,7 +43,6 @@ namespace LedgerWallet.Transports
 
             _VendorProductIds = new VendorProductIds(device.VendorId, device.ProductId);
             _AcceptedUsageSpecifications = acceptedUsageSpecifications;
-            ReadTimeout = TimeSpan.FromMilliseconds(DEFAULT_TIMEOUT);
         }
 
         UsageSpecification[] _AcceptedUsageSpecifications;
@@ -59,24 +58,24 @@ namespace LedgerWallet.Transports
 
         protected SemaphoreSlim _SemaphoreSlim = new SemaphoreSlim(1, 1);
         bool initializing = false;
-        public async Task<byte[][]> Exchange(byte[][] apdus)
+        public async Task<byte[][]> Exchange(byte[][] apdus, CancellationToken cancellation)
         {
             if(needInit && !initializing)
             {
                 initializing = true;
-                await InitAsync();
+                await InitAsync(cancellation);
                 needInit = false;
                 initializing = false;
             }
-            var response = await ExchangeCoreAsync(apdus).ConfigureAwait(false);
+            var response = await ExchangeCoreAsync(apdus, cancellation).ConfigureAwait(false);
 
             if(response == null)
             {
-				if(!await RenewTransportAsync())
+				if(!await RenewTransportAsync(cancellation))
 				{
 					throw new LedgerWalletException("Ledger disconnected");
 				}
-                response = await ExchangeCoreAsync(apdus).ConfigureAwait(false);
+                response = await ExchangeCoreAsync(apdus, cancellation).ConfigureAwait(false);
                 if(response == null)
                     throw new LedgerWalletException("Error while transmission");
             }
@@ -84,7 +83,7 @@ namespace LedgerWallet.Transports
             return response;
         }
 
-		async Task<bool> RenewTransportAsync()
+		async Task<bool> RenewTransportAsync(CancellationToken cancellation)
 		{
 			var newDevice = EnumerateHIDDevices(new[]
 			{
@@ -97,13 +96,13 @@ namespace LedgerWallet.Transports
 			if(!await _Device.GetIsConnectedAsync())
 			{
 				var windowsHidDevice = _Device as WindowsHidDevice;
-				await windowsHidDevice.InitializeAsync();
+				await windowsHidDevice.InitializeAsync().WithCancellation(cancellation);
 			}
-			await InitAsync();
+			await InitAsync(cancellation);
 			return true;
 		}
 
-        protected virtual Task InitAsync()
+        protected virtual Task InitAsync(CancellationToken cancellation)
         {
 #if(NETSTANDARD2_0)
             return Task.CompletedTask;
@@ -139,7 +138,7 @@ namespace LedgerWallet.Transports
         const uint MAX_BLOCK = 64;
         const int DEFAULT_TIMEOUT = 20000;
 
-        internal async Task<byte[][]> ExchangeCoreAsync(byte[][] apdus)
+        internal async Task<byte[][]> ExchangeCoreAsync(byte[][] apdus, CancellationToken cancellation)
         {
             if(apdus == null || apdus.Length == 0)
                 return null;
@@ -153,7 +152,7 @@ namespace LedgerWallet.Transports
                 foreach(var apdu in apdus)
                 {
                     await WriteAsync(apdu);
-                    var result = await ReadAsync();
+                    var result = await ReadAsync(cancellation);
                     if(result == null)
                         return null;
                     resultList.Add(result);
@@ -167,7 +166,7 @@ namespace LedgerWallet.Transports
             return resultList.ToArray();
         }
 
-        protected async Task<byte[]> ReadAsync()
+        protected async Task<byte[]> ReadAsync(CancellationToken cancellation)
         {
             byte[] packet = new byte[MAX_BLOCK];
             MemoryStream response = new MemoryStream();
@@ -175,7 +174,7 @@ namespace LedgerWallet.Transports
             int sequenceIdx = 0;
             do
             {
-                var result = await hid_read_timeout(packet, MAX_BLOCK);
+                var result = await hid_read_timeout(packet, MAX_BLOCK, cancellation);
                 if(result < 0)
                     return null;
                 var commandPart = UnwrapReponseAPDU(packet, ref sequenceIdx, ref remaining);
@@ -204,31 +203,27 @@ namespace LedgerWallet.Transports
 
         protected abstract byte[] WrapCommandAPDU(Stream apduStream, ref int sequenceIdx);
 
-
-        protected TimeSpan ReadTimeout
-        {
-            get; set;
-        }
-
-        private async Task<int> hid_read_timeout(byte[] buffer, uint offset, uint length)
+        private async Task<int> hid_read_timeout(byte[] buffer, uint offset, uint length, CancellationToken cancellation)
         {
             var bytes = new byte[length];
             Array.Copy(buffer, offset, bytes, 0, length);
-            var result = await hid_read_timeout(bytes, length);
+            var result = await hid_read_timeout(bytes, length, cancellation);
             Array.Copy(bytes, 0, buffer, offset, length);
             return result;
         }
 
-        internal async Task<int> hid_read_timeout(byte[] buffer, uint length)
+        internal async Task<int> hid_read_timeout(byte[] buffer, uint length, CancellationToken cancellation)
         {
             //Note: this method used to read 64 bytes and shift that right in to an array of 65 bytes
             //Android does this automatically, so, we can't do this here for compatibility with Android.
             //See the flag DataHasExtraByte on WindowsHidDevice and UWPHidDevice
 
-            var result = await _Device.ReadAsync();
+            var result = await _Device.ReadAsync().WithCancellation(cancellation);
             Array.Copy(result, 0, buffer, 0, length);
             return result.Length;
         }
+
+
 
         internal async Task<int> hid_write(byte[] buffer, int length)
         {

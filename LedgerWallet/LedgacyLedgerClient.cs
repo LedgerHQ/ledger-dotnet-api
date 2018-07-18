@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using LedgerWallet.Transports;
 using System.IO;
+using System.Threading;
 
 namespace LedgerWallet
 {
@@ -25,16 +26,16 @@ namespace LedgerWallet
 			return ledgers;
 		}
 
-        public Task<VerifyPinResult> VerifyPinAsync(string pin)
+        public Task<VerifyPinResult> VerifyPinAsync(string pin, CancellationToken cancellation = default(CancellationToken))
 		{
-			return VerifyPinAsync(new UserPin(pin));
+			return VerifyPinAsync(new UserPin(pin), cancellation);
 		}
 
-		public async Task<VerifyPinResult> VerifyPinAsync(UserPin pin)
+		public async Task<VerifyPinResult> VerifyPinAsync(UserPin pin, CancellationToken cancellation = default(CancellationToken))
 		{
 			var retVal = new VerifyPinResult();
 
-			var response = await ExchangeSingleAPDUAsync(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_VERIFY_PIN, 0, 0, pin.ToBytes());
+			var response = await ExchangeSingleAPDUAsync(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_VERIFY_PIN, 0, 0, pin.ToBytes(), cancellation);
 
 			if (response.SW == LedgerWalletConstants.SW_OK)
 			{
@@ -49,32 +50,32 @@ namespace LedgerWallet
 			return retVal;
 		}
 
-		public async Task<int> GetRemainingAttemptsAsync()
+		public async Task<int> GetRemainingAttemptsAsync(CancellationToken cancellation = default(CancellationToken))
 		{
-			var response = await ExchangeSingleAPDUAsync(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_VERIFY_PIN, 0x80, 0, new byte[] { 1 });
+			var response = await ExchangeSingleAPDUAsync(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_VERIFY_PIN, 0x80, 0, new byte[] { 1 }, cancellation);
 			return (response.SW & 0x0F);
 		}
 
-		public async Task<OperationMode> GetOperationModeAsync()
+		public async Task<OperationMode> GetOperationModeAsync(CancellationToken cancellation = default(CancellationToken))
 		{
-			var response = await ExchangeSingleAPDUAsync(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_OPERATION_MODE, 0, 0, 0, OK).ConfigureAwait(false);
+			var response = await ExchangeSingleAPDUAsync(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_OPERATION_MODE, 0, 0, 0, OK, cancellation).ConfigureAwait(false);
 			return (OperationMode)response[0];
 		}
 
-		public async Task<SecondFactorMode> GetSecondFactorModeAsync()
+		public async Task<SecondFactorMode> GetSecondFactorModeAsync(CancellationToken cancellation = default(CancellationToken))
 		{
-			var response = await ExchangeSingleAPDUAsync(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_OPERATION_MODE, 1, 0, 0, OK).ConfigureAwait(false);
+			var response = await ExchangeSingleAPDUAsync(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_OPERATION_MODE, 1, 0, 0, OK, cancellation).ConfigureAwait(false);
 			return (SecondFactorMode)response[0];
 		}
 
-		public async Task SetOperationMode(OperationMode value)
+		public async Task SetOperationMode(OperationMode value, CancellationToken cancellation = default(CancellationToken))
 		{
-			await ExchangeSingleAPDUAsync(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_SET_OPERATION_MODE, 0, 0, new[] { (byte)value }, OK);
+			await ExchangeSingleAPDUAsync(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_SET_OPERATION_MODE, 0, 0, new[] { (byte)value }, OK, cancellation);
 		}
 
-		public async Task<SetupResponse> RegularSetupAsync(RegularSetup setup)
+		public async Task<SetupResponse> RegularSetupAsync(RegularSetup setup, CancellationToken cancellation = default(CancellationToken))
 		{
-			var response = await ExchangeSingleAPDUAsync(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_SETUP, 0, 0, setup.ToBytes(), OK).ConfigureAwait(false);
+			var response = await ExchangeSingleAPDUAsync(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_SETUP, 0, 0, setup.ToBytes(), OK, cancellation).ConfigureAwait(false);
 			return new SetupResponse(response);
 		}
 	}

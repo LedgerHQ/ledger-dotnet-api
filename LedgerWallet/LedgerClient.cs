@@ -30,9 +30,9 @@ namespace LedgerWallet
 			return ledgers;
 		}
 
-        public async Task<LedgerWalletFirmware> GetFirmwareVersionAsync()
+        public async Task<LedgerWalletFirmware> GetFirmwareVersionAsync(CancellationToken cancellation = default(CancellationToken))
 		{
-			byte[] response = await ExchangeSingleAPDUAsync(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_FIRMWARE_VERSION, (byte)0x00, (byte)0x00, 0x00, OK).ConfigureAwait(false);
+			byte[] response = await ExchangeSingleAPDUAsync(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_FIRMWARE_VERSION, (byte)0x00, (byte)0x00, 0x00, OK, cancellation).ConfigureAwait(false);
 			return new LedgerWalletFirmware(response);
 		}
 
@@ -44,7 +44,7 @@ namespace LedgerWallet
 			NativeSegwit = 0x02,
 		}
 
-		public async Task<GetWalletPubKeyResponse> GetWalletPubKeyAsync(KeyPath keyPath, AddressType addressType = AddressType.Legacy, bool display = false)
+		public async Task<GetWalletPubKeyResponse> GetWalletPubKeyAsync(KeyPath keyPath, AddressType addressType = AddressType.Legacy, bool display = false, CancellationToken cancellation = default(CancellationToken))
 		{
 			Guard.AssertKeyPath(keyPath);
 			byte[] bytes = Serializer.Serialize(keyPath);
@@ -53,7 +53,7 @@ namespace LedgerWallet
 				LedgerWalletConstants.LedgerWallet_CLA,
 				LedgerWalletConstants.LedgerWallet_INS_GET_WALLET_PUBLIC_KEY,
 				(byte)(display ? 1 : 0),
-				(byte)addressType, bytes, OK).ConfigureAwait(false);
+				(byte)addressType, bytes, OK, cancellation).ConfigureAwait(false);
 			return new GetWalletPubKeyResponse(response);
 		}
 
@@ -94,22 +94,22 @@ namespace LedgerWallet
 			}
 		}
 
-		public Task<TrustedInput> GetTrustedInputAsync(IndexedTxOut txout)
+		public Task<TrustedInput> GetTrustedInputAsync(IndexedTxOut txout, CancellationToken cancellation = default(CancellationToken))
 		{
-			return GetTrustedInputAsync(txout.Transaction, (int)txout.N);
+			return GetTrustedInputAsync(txout.Transaction, (int)txout.N, cancellation);
 		}
 
-		public TrustedInput GetTrustedInput(IndexedTxOut txout)
+		public TrustedInput GetTrustedInput(IndexedTxOut txout, CancellationToken cancellation = default(CancellationToken))
 		{
-			return GetTrustedInputAsync(txout.Transaction, (int)txout.N).GetAwaiter().GetResult();
+			return GetTrustedInputAsync(txout.Transaction, (int)txout.N, cancellation).GetAwaiter().GetResult();
 		}
 
-		public TrustedInput GetTrustedInput(Transaction transaction, int outputIndex)
+		public TrustedInput GetTrustedInput(Transaction transaction, int outputIndex, CancellationToken cancellation = default(CancellationToken))
 		{
-			return GetTrustedInputAsync(transaction, outputIndex).GetAwaiter().GetResult();
+			return GetTrustedInputAsync(transaction, outputIndex, cancellation).GetAwaiter().GetResult();
 		}
 
-		public async Task<TrustedInput> GetTrustedInputAsync(Transaction transaction, int outputIndex)
+		public async Task<TrustedInput> GetTrustedInputAsync(Transaction transaction, int outputIndex, CancellationToken cancellation = default(CancellationToken))
 		{
 			if(outputIndex >= transaction.Outputs.Count)
 				throw new ArgumentOutOfRangeException("outputIndex is bigger than the number of outputs in the transaction", "outputIndex");
@@ -148,7 +148,7 @@ namespace LedgerWallet
 			}
 			// Locktime
 			apdus.Add(CreateAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_TRUSTED_INPUT, (byte)0x80, (byte)0x00, transaction.LockTime.ToBytes()));
-			byte[] response = await ExchangeApdusAsync(apdus.ToArray(), OK).ConfigureAwait(false);
+			byte[] response = await ExchangeApdusAsync(apdus.ToArray(), OK, cancellation).ConfigureAwait(false);
 			return new TrustedInput(response);
 		}
 
@@ -273,7 +273,7 @@ namespace LedgerWallet
 			return await SignTransactionAsync(requests.ToArray(), transaction, changePath: changePath);
 		}
 
-		public async Task<Transaction> SignTransactionAsync(SignatureRequest[] signatureRequests, Transaction transaction, KeyPath changePath = null)
+		public async Task<Transaction> SignTransactionAsync(SignatureRequest[] signatureRequests, Transaction transaction, KeyPath changePath = null, CancellationToken cancellation = default(CancellationToken))
 		{
 			if(signatureRequests.Length == 0)
 				throw new ArgumentException("No signatureRequests is passed", "signatureRequests");
@@ -294,7 +294,7 @@ namespace LedgerWallet
 			{
 				foreach(var sigRequest in signatureRequests)
 				{
-					trustedInputsAsync.Add(GetTrustedInputAsync(sigRequest.InputTransaction, (int)sigRequest.InputCoin.Outpoint.N));
+					trustedInputsAsync.Add(GetTrustedInputAsync(sigRequest.InputTransaction, (int)sigRequest.InputCoin.Outpoint.N, cancellation));
 				}
 			}
 
@@ -302,7 +302,7 @@ namespace LedgerWallet
 			List<Task<GetWalletPubKeyResponse>> getPubKeys = new List<Task<GetWalletPubKeyResponse>>();
 			foreach(var previousReq in noPubKeyRequests)
 			{
-				getPubKeys.Add(GetWalletPubKeyAsync(previousReq.KeyPath));
+				getPubKeys.Add(GetWalletPubKeyAsync(previousReq.KeyPath, cancellation: cancellation));
 			}
 			await Task.WhenAll(getPubKeys).ConfigureAwait(false);
 			await Task.WhenAll(trustedInputsAsync).ConfigureAwait(false);
@@ -335,7 +335,7 @@ namespace LedgerWallet
 				}
 				apdus.Add(UntrustedHashSign(sigRequest.KeyPath, null, transaction.LockTime, SigHash.All));
 			}
-			var responses = await ExchangeAsync(apdus.ToArray()).ConfigureAwait(false);
+			var responses = await ExchangeAsync(apdus.ToArray(), cancellation).ConfigureAwait(false);
 			foreach(var response in responses)
 				if(response.Response.Length > 10) //Probably a signature
 					response.Response[0] = 0x30;

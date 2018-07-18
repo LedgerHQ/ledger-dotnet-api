@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.IO;
 using NBitcoin;
 using System.Diagnostics;
+using System.Threading;
 
 namespace LedgerWallet.Transports
 {
@@ -98,7 +99,6 @@ namespace LedgerWallet.Transports
 
 		protected HIDU2FTransport(string devicePath, IHidDevice device) : base(devicePath, device, _UsageSpecification)
 		{
-			ReadTimeout = TimeSpan.FromSeconds(0.5);
 		}
 
 		static readonly HIDDeviceTransportRegistry<HIDU2FTransport> _Registry;
@@ -107,7 +107,7 @@ namespace LedgerWallet.Transports
 			_Registry = new HIDDeviceTransportRegistry<HIDU2FTransport>((path, d) => new HIDU2FTransport(path, d));
 		}
 
-		protected async override Task InitAsync()
+		protected async override Task InitAsync(CancellationToken cancellation)
 		{
 			await _SemaphoreSlim.WaitAsync();
 
@@ -120,7 +120,7 @@ namespace LedgerWallet.Transports
 				await WriteAsync(nonce);
 				do
 				{
-					response = await ReadAsync();
+					response = await ReadAsync(cancellation);
 					if(response == null)
 						throw new LedgerWalletException("Error while transmission");
 					Array.Copy(response, 0, readenNonce, 0, nonce.Length);

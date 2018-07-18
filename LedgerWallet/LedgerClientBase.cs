@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using LedgerWallet.Transports;
 
@@ -147,35 +148,35 @@ namespace LedgerWallet
 		}
 
 
-		protected Task<byte[]> ExchangeSingleAPDUAsync(byte cla, byte ins, byte p1, byte p2, byte[] data, int[] acceptedSW)
+		protected Task<byte[]> ExchangeSingleAPDUAsync(byte cla, byte ins, byte p1, byte p2, byte[] data, int[] acceptedSW, CancellationToken cancellation)
 		{
-			return ExchangeApdusAsync(new byte[][] { CreateAPDU(cla, ins, p1, p2, data) }, acceptedSW);
+			return ExchangeApdusAsync(new byte[][] { CreateAPDU(cla, ins, p1, p2, data) }, acceptedSW, cancellation);
 		}
 
-		protected Task<APDUResponse> ExchangeSingleAPDUAsync(byte cla, byte ins, byte p1, byte p2, byte[] data)
+		protected Task<APDUResponse> ExchangeSingleAPDUAsync(byte cla, byte ins, byte p1, byte p2, byte[] data, CancellationToken cancellation)
 		{
-			return ExchangeSingleAsync(new byte[][] { CreateAPDU(cla, ins, p1, p2, data) });
+			return ExchangeSingleAsync(new byte[][] { CreateAPDU(cla, ins, p1, p2, data) }, cancellation);
 		}
 
-		protected Task<byte[]> ExchangeSingleAPDUAsync(byte cla, byte ins, byte p1, byte p2, int length, int[] acceptedSW)
+		protected Task<byte[]> ExchangeSingleAPDUAsync(byte cla, byte ins, byte p1, byte p2, int length, int[] acceptedSW, CancellationToken cancellation)
 		{
 			byte[] apdu = new byte[]
 			{
 				cla,ins,p1,p2,(byte)length
 			};
-			return ExchangeApdusAsync(new byte[][] { apdu }, acceptedSW);
+			return ExchangeApdusAsync(new byte[][] { apdu }, acceptedSW, cancellation);
 		}
 
-		protected async Task<byte[]> ExchangeApdusAsync(byte[][] apdus, int[] acceptedSW)
+		protected async Task<byte[]> ExchangeApdusAsync(byte[][] apdus, int[] acceptedSW, CancellationToken cancellation)
 		{
-			var resp = await ExchangeSingleAsync(apdus).ConfigureAwait(false);
+			var resp = await ExchangeSingleAsync(apdus, cancellation).ConfigureAwait(false);
 			CheckSW(acceptedSW, resp.SW);
 			return resp.Response;
 		}
 
-		protected async Task<APDUResponse> ExchangeSingleAsync(byte[][] apdus)
+		protected async Task<APDUResponse> ExchangeSingleAsync(byte[][] apdus, CancellationToken cancellation)
 		{
-			var responses = await ExchangeAsync(apdus).ConfigureAwait(false);
+			var responses = await ExchangeAsync(apdus, cancellation).ConfigureAwait(false);
 			var last = responses.Last();
 			foreach(var response in responses)
 			{
@@ -184,9 +185,9 @@ namespace LedgerWallet
 			}
 			return last;
 		}
-		protected async Task<APDUResponse[]> ExchangeAsync(byte[][] apdus)
+		protected async Task<APDUResponse[]> ExchangeAsync(byte[][] apdus, CancellationToken cancellation)
 		{
-			byte[][] responses = await Transport.Exchange(apdus).ConfigureAwait(false);
+			byte[][] responses = await Transport.Exchange(apdus, cancellation).ConfigureAwait(false);
 			List<APDUResponse> resultResponses = new List<APDUResponse>();
 			foreach(var response in responses)
 			{

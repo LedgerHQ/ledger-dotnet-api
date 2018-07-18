@@ -2,13 +2,37 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace LedgerWallet
 {
 	public static class Extensions
 	{
-		public static Dictionary<TKey, TValue> ToDictionaryUnique<TKey, TValue>(this IEnumerable<TValue> v, Func<TValue, TKey> selectKey)
+        internal static async Task WithCancellation(this Task task, CancellationToken cancellationToken)
+        {
+            using(var delayCTS = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken))
+            {
+                var waiting = Task.Delay(-1, delayCTS.Token);
+                var doing = task;
+                await Task.WhenAny(waiting, doing);
+                delayCTS.Cancel();
+                cancellationToken.ThrowIfCancellationRequested();
+            }
+        }
+        internal static async Task<T> WithCancellation<T>(this Task<T> task, CancellationToken cancellationToken)
+        {
+            using(var delayCTS = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken))
+            {
+                var waiting = Task.Delay(-1, delayCTS.Token);
+                var doing = task;
+                await Task.WhenAny(waiting, doing);
+                delayCTS.Cancel();
+                cancellationToken.ThrowIfCancellationRequested();
+                return await doing;
+            }
+        }
+        public static Dictionary<TKey, TValue> ToDictionaryUnique<TKey, TValue>(this IEnumerable<TValue> v, Func<TValue, TKey> selectKey)
 		{
 			Dictionary<TKey, TValue> dico = new Dictionary<TKey, TValue>();
 			foreach(var value in v)
