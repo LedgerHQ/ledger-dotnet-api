@@ -44,7 +44,6 @@ namespace LedgerWallet.Tests
 			Debugger.Break();
 			var login = await u2f.AuthenticateAsync(challenge, appId, reg.KeyHandle);
 			Assert.NotNull(login);
-			Assert.True(login.UserPresence);
 		}
 	}
 }
