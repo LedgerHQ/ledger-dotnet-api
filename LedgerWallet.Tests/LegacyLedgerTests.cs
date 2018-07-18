@@ -115,14 +115,14 @@ namespace LedgerWallet.Tests
 
 			Debugger.Break(); //Remove then insert
 
-			ledger = (LegacyLedgerClient)await NanoSTests.GetLedgerAsync(NanoSTests.LedgerType.LegacyLedger);
+			ledger = (await LegacyLedgerClient.GetHIDLedgersAsync()).First();
 			verifyPinResult.Remaining = await ledger.GetRemainingAttemptsAsync();
 			Assert.Equal(2, verifyPinResult.Remaining);
 		}
 
 		private static LegacyLedgerClient GetLedger()
 		{
-			return (LegacyLedgerClient)NanoSTests.GetLedgerAsync(NanoSTests.LedgerType.LegacyLedger).GetAwaiter().GetResult();
+			return LegacyLedgerClient.GetHIDLedgersAsync().GetAwaiter().GetResult().First();
 		}
 	}
 }

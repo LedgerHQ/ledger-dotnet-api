@@ -21,7 +21,7 @@ namespace LedgerWallet.Tests
 		{
 			var appId = new AppId(Encoders.Hex.DecodeData("d2e42c173c857991d5e1b6c81f3e07cbb9d5f57431fe41997c9445c14ce61ec4"));
 			var challenge = Encoders.Hex.DecodeData("e6425678fbd7d3d8e311fbfb1db8d26c37cf9f16ac81c95848998a76ce3d3768");
-			var u2f = (U2FClient)await NanoSTests.GetLedgerAsync(NanoSTests.LedgerType.U2F);
+			var u2f = (await U2FClient.GetHIDU2FAsync()).First();
 
 			// Refuse registration
 			Debugger.Break();

@@ -22,7 +22,7 @@ namespace LedgerWallet.Tests
         [Fact]
         public async Task LedgerIsThreadSafe()
         {
-            var ledger = (LedgerClient)await GetLedgerAsync(LedgerType.Ledger);
+            var ledger = (await LedgerClient.GetHIDLedgersAsync()).First();
 
             var tasks = new List<Task>();
 
@@ -47,7 +47,7 @@ namespace LedgerWallet.Tests
         [Trait("Manual", "Manual")]
         public async Task CanGetWalletPubKey()
         {
-            var ledger = (LedgerClient)await GetLedgerAsync(LedgerType.Ledger);
+            var ledger = (await LedgerClient.GetHIDLedgersAsync()).First();
             var firmwareVersion = await ledger.GetFirmwareVersionAsync();
             var path = new KeyPath("1'/0");
             var walletPubKeyResponse = await ledger.GetWalletPubKeyAsync(path, LedgerClient.AddressType.Legacy, true);
@@ -57,7 +57,7 @@ namespace LedgerWallet.Tests
 
         private async Task CanSignTransactionStandardModeCore(bool segwit)
         {
-            var ledger = (LedgerClient)await GetLedgerAsync(LedgerType.Ledger);
+            var ledger = (await LedgerClient.GetHIDLedgersAsync()).First();
             var walletPubKey = await ledger.GetWalletPubKeyAsync(new KeyPath("1'/0"));
             var address = segwit ? walletPubKey.UncompressedPublicKey.Compress().WitHash.ScriptPubKey : walletPubKey.GetAddress(network).ScriptPubKey;
 
@@ -120,7 +120,7 @@ namespace LedgerWallet.Tests
         [Trait("Manual", "Manual")]
         public async Task CanSignTransactionStandardModeConcurrently()
         {
-            var ledger = (LedgerClient)await GetLedgerAsync(LedgerType.Ledger);
+            var ledger = (await LedgerClient.GetHIDLedgersAsync()).First();
 
             var walletPubKey = await ledger.GetWalletPubKeyAsync(new KeyPath("1'/0"));
             var address = walletPubKey.GetAddress(network);
@@ -164,62 +164,6 @@ namespace LedgerWallet.Tests
             }
 
             await Task.WhenAll(tasks);
-        }
-
-
-		public static async Task<LedgerClientBase> GetLedgerAsync(LedgerType ledgerType  = LedgerType.Ledger)
-		{
-            switch(ledgerType)
-            {
-                case LedgerType.Ledger:
-                    return (await LedgerClient.GetHIDLedgersAsync()).FirstOrDefault();
-                case LedgerType.LegacyLedger:
-                    return (await LegacyLedgerClient.GetHIDLedgersAsync()).FirstOrDefault();
-                case LedgerType.U2F:
-                    return (await U2FClient.GetHIDU2FAsync()).FirstOrDefault();
-                default:
-                    throw new NotSupportedException();
-            }
-		}
-
-        //public async static Task<LedgerClientBase> GetLedgerAsync(LedgerType ledgerType = LedgerType.Ledger)
-        //{
-        //    var vid = (ushort)11415;
-        //    var devices = WindowsHidDevice.GetConnectedDeviceInformations();
-        //    var potentialDevices = devices.Where(d => d.VendorId == vid).ToList();
-
-        //    var acceptedUsages = new[] { new UsageSpecification(65440, 0x01) };
-
-        //    var ledgerDeviceInformation = devices
-        //    .FirstOrDefault(d =>
-        //    acceptedUsages == null ||
-        //    acceptedUsages.Length == 0 ||
-        //    acceptedUsages.Any(u => d.UsagePage == u.UsagePage && d.Usage == u.Usage));
-
-        //    var windowsHidDevice = new WindowsHidDevice(ledgerDeviceInformation);
-        //    windowsHidDevice.DataHasExtraByte = true;
-        //    await windowsHidDevice.InitializeAsync();
-        //    var ledgerTransport = new HIDLedgerTransport(ledgerDeviceInformation.DevicePath, windowsHidDevice);
-
-        //    switch(ledgerType)
-        //    {
-        //        case LedgerType.Ledger:
-        //            return new LedgerClient(ledgerTransport);
-        //        case LedgerType.LegacyLedger:
-        //            return new LegacyLedgerClient(ledgerTransport);
-        //        case LedgerType.U2F:
-        //            return new U2FClient(ledgerTransport);
-        //        default:
-        //            throw new NotImplementedException();
-        //    }
-        //}
-
-
-        public enum LedgerType
-        {
-            Ledger,
-            LegacyLedger,
-            U2F
         }
     }
 }
