@@ -1,5 +1,4 @@
-﻿using Hid.Net;
-using LedgerWallet.Transports;
+﻿using LedgerWallet.Transports;
 using LedgerWallet.U2F;
 using NBitcoin;
 using NBitcoin.DataEncoders;

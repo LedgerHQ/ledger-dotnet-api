@@ -1,4 +1,4 @@
-﻿using Hid.Net;
+﻿using LedgerWallet.HIDProviders;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -11,34 +11,16 @@ using System.Threading.Tasks;
 
 namespace LedgerWallet.Transports
 {
-    public class UsageSpecification
-    {
-        public UsageSpecification(ushort usagePage, ushort usage)
-        {
-            UsagePage = usagePage;
-            Usage = usage;
-        }
-
-        public ushort Usage
-        {
-            get;
-            private set;
-        }
-        public ushort UsagePage
-        {
-            get;
-            private set;
-        }
-    }
+    
     public abstract class HIDTransportBase : ILedgerTransport
     {
-        internal IHidDevice _Device;
-		readonly string _DevicePath;
+        internal IHIDDevice _Device;
         readonly VendorProductIds _VendorProductIds;
 
-        protected HIDTransportBase(string devicePath, IHidDevice device, UsageSpecification[] acceptedUsageSpecifications)
+        protected HIDTransportBase(IHIDDevice device, UsageSpecification[] acceptedUsageSpecifications)
         {
-            _DevicePath = devicePath;
+            if(device == null)
+                throw new ArgumentNullException(nameof(device));
             _Device = device;
 
             _VendorProductIds = new VendorProductIds(device.VendorId, device.ProductId);
@@ -48,13 +30,13 @@ namespace LedgerWallet.Transports
         UsageSpecification[] _AcceptedUsageSpecifications;
 
         bool needInit = true;
-		public string DevicePath
-		{
-			get
-			{
-				return _DevicePath;
-			}
-		}
+        public string DevicePath
+        {
+            get
+            {
+                return _Device.DevicePath;
+            }
+        }
 
         protected SemaphoreSlim _SemaphoreSlim = new SemaphoreSlim(1, 1);
         bool initializing = false;
@@ -71,10 +53,10 @@ namespace LedgerWallet.Transports
 
             if(response == null)
             {
-				if(!await RenewTransportAsync(cancellation))
-				{
-					throw new LedgerWalletException("Ledger disconnected");
-				}
+                if(!await RenewTransportAsync(cancellation))
+                {
+                    throw new LedgerWalletException("Ledger disconnected");
+                }
                 response = await ExchangeCoreAsync(apdus, cancellation).ConfigureAwait(false);
                 if(response == null)
                     throw new LedgerWalletException("Error while transmission");
@@ -83,24 +65,16 @@ namespace LedgerWallet.Transports
             return response;
         }
 
-		async Task<bool> RenewTransportAsync(CancellationToken cancellation)
-		{
-			var newDevice = EnumerateHIDDevices(new[]
-			{
-				this._VendorProductIds
-			}, _AcceptedUsageSpecifications)
-			.FirstOrDefault(hid => hid.DevicePath == _DevicePath);
-			if(newDevice == null)
-				return false;
-			_Device = new WindowsHidDevice(newDevice);
-			if(!await _Device.GetIsConnectedAsync())
-			{
-				var windowsHidDevice = _Device as WindowsHidDevice;
-				await windowsHidDevice.InitializeAsync().WithCancellation(cancellation);
-			}
-			await InitAsync(cancellation);
-			return true;
-		}
+        async Task<bool> RenewTransportAsync(CancellationToken cancellation)
+        {
+            _Device = _Device.Clone();
+            try
+            {
+                await _Device.EnsureInitializedAsync(cancellation);
+            }
+            catch(HIDDeviceException) { return false; }
+            return await _Device.IsConnectedAsync();
+        }
 
         protected virtual Task InitAsync(CancellationToken cancellation)
         {
@@ -110,29 +84,6 @@ namespace LedgerWallet.Transports
             return Task.FromResult<bool>(true);
 #endif
         }
-
-		internal static IEnumerable<DeviceInformation> EnumerateHIDDevices(IEnumerable<VendorProductIds> vendorProductIds, params UsageSpecification[] acceptedUsages)
-		{
-			List<DeviceInformation> devices = new List<DeviceInformation>();
-
-			var collection = WindowsHidDevice.GetConnectedDeviceInformations();
-
-			foreach(var ids in vendorProductIds)
-			{
-				if(ids.ProductId == null)
-					devices.AddRange(collection.Where(c => c.VendorId == ids.VendorId));
-				else
-					devices.AddRange(collection.Where(c => c.VendorId == ids.VendorId && c.ProductId == ids.ProductId));
-
-			}
-			var retVal = devices
-				.Where(d =>
-				acceptedUsages == null ||
-				acceptedUsages.Length == 0 ||
-				acceptedUsages.Any(u => d.UsagePage == u.UsagePage && d.Usage == u.Usage)).ToList();
-
-			return retVal;
-		}
 
 
         const uint MAX_BLOCK = 64;
@@ -151,7 +102,7 @@ namespace LedgerWallet.Transports
             {
                 foreach(var apdu in apdus)
                 {
-                    await WriteAsync(apdu);
+                    await WriteAsync(apdu, cancellation);
                     var result = await ReadAsync(cancellation);
                     if(result == null)
                         return null;
@@ -168,25 +119,30 @@ namespace LedgerWallet.Transports
 
         protected async Task<byte[]> ReadAsync(CancellationToken cancellation)
         {
-            byte[] packet = new byte[MAX_BLOCK];
             MemoryStream response = new MemoryStream();
             int remaining = 0;
             int sequenceIdx = 0;
-            do
+            try
             {
-                var result = await hid_read_timeout(packet, MAX_BLOCK, cancellation);
-                if(result < 0)
-                    return null;
-                var commandPart = UnwrapReponseAPDU(packet, ref sequenceIdx, ref remaining);
-                if(commandPart == null)
-                    return null;
-                response.Write(commandPart, 0, commandPart.Length);
-            } while(remaining != 0);
 
+                do
+                {
+                    var result = await _Device.ReadAsync(cancellation);
+                    var commandPart = UnwrapReponseAPDU(result, ref sequenceIdx, ref remaining);
+                    if(commandPart == null)
+                        return null;
+                    response.Write(commandPart, 0, commandPart.Length);
+                } while(remaining != 0);
+
+            }
+            catch(HIDDeviceException)
+            {
+                return null;
+            }
             return response.ToArray();
         }
 
-        protected async Task<byte[]> WriteAsync(byte[] apdu)
+        protected async Task<byte[]> WriteAsync(byte[] apdu, CancellationToken cancellation)
         {
             int sequenceIdx = 0;
             byte[] packet = null;
@@ -194,7 +150,7 @@ namespace LedgerWallet.Transports
             do
             {
                 packet = WrapCommandAPDU(apduStream, ref sequenceIdx);
-                await hid_write(packet, packet.Length);
+                await _Device.WriteAsync(packet, 0, packet.Length, cancellation);
             } while(apduStream.Position != apduStream.Length);
             return packet;
         }
@@ -202,37 +158,5 @@ namespace LedgerWallet.Transports
         protected abstract byte[] UnwrapReponseAPDU(byte[] packet, ref int sequenceIdx, ref int remaining);
 
         protected abstract byte[] WrapCommandAPDU(Stream apduStream, ref int sequenceIdx);
-
-        private async Task<int> hid_read_timeout(byte[] buffer, uint offset, uint length, CancellationToken cancellation)
-        {
-            var bytes = new byte[length];
-            Array.Copy(buffer, offset, bytes, 0, length);
-            var result = await hid_read_timeout(bytes, length, cancellation);
-            Array.Copy(bytes, 0, buffer, offset, length);
-            return result;
-        }
-
-        internal async Task<int> hid_read_timeout(byte[] buffer, uint length, CancellationToken cancellation)
-        {
-            //Note: this method used to read 64 bytes and shift that right in to an array of 65 bytes
-            //Android does this automatically, so, we can't do this here for compatibility with Android.
-            //See the flag DataHasExtraByte on WindowsHidDevice and UWPHidDevice
-
-            var result = await _Device.ReadAsync().WithCancellation(cancellation);
-            Array.Copy(result, 0, buffer, 0, length);
-            return result.Length;
-        }
-
-
-
-        internal async Task<int> hid_write(byte[] buffer, int length)
-        {
-            //Note: this method used to take 64 bytes and shift that right in to an array of 65 bytes and then write to the device
-            //Android does this automatically, so, we can't do this here for compatibility with Android.
-            //See the flag DataHasExtraByte on WindowsHidDevice and UWPHidDevice
-
-            await _Device.WriteAsync(buffer);
-            return length;
-        }
     }
 }

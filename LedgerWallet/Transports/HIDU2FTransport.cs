@@ -1,5 +1,4 @@
-﻿using Hid.Net;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,6 +7,7 @@ using System.IO;
 using NBitcoin;
 using System.Diagnostics;
 using System.Threading;
+using LedgerWallet.HIDProviders;
 
 namespace LedgerWallet.Transports
 {
@@ -97,14 +97,14 @@ namespace LedgerWallet.Transports
 				new VendorProductIds(0x2c97, 0x0001),  // Nano S
 		};
 
-		protected HIDU2FTransport(string devicePath, IHidDevice device) : base(devicePath, device, _UsageSpecification)
+		protected HIDU2FTransport(IHIDDevice device) : base(device, _UsageSpecification)
 		{
 		}
 
 		static readonly HIDDeviceTransportRegistry<HIDU2FTransport> _Registry;
 		static HIDU2FTransport()
 		{
-			_Registry = new HIDDeviceTransportRegistry<HIDU2FTransport>((path, d) => new HIDU2FTransport(path, d));
+			_Registry = new HIDDeviceTransportRegistry<HIDU2FTransport>((d) => new HIDU2FTransport(d));
 		}
 
 		protected async override Task InitAsync(CancellationToken cancellation)
@@ -117,7 +117,7 @@ namespace LedgerWallet.Transports
 				var nonce = RandomUtils.GetBytes(8);
 				var readenNonce = nonce.ToArray();
 				byte[] response;
-				await WriteAsync(nonce);
+				await WriteAsync(nonce, cancellation);
 				do
 				{
 					response = await ReadAsync(cancellation);
@@ -136,10 +136,10 @@ namespace LedgerWallet.Transports
 
 		static UsageSpecification[] _UsageSpecification = new[] { new UsageSpecification(0xf1d0, 0x01) };
 
-		public static Task<IEnumerable<HIDU2FTransport>> GetHIDTransportsAsync(IEnumerable<VendorProductIds> ids = null)
+		public static Task<IEnumerable<HIDU2FTransport>> GetHIDTransportsAsync(IEnumerable<VendorProductIds> ids = null, CancellationToken cancellation = default(CancellationToken))
 		{
 			ids = ids ?? WellKnownU2F;
-			return _Registry.GetHIDTransportsAsync(ids, _UsageSpecification);
+			return _Registry.GetHIDTransportsAsync(ids, _UsageSpecification, cancellation);
 		}
 
 		protected override byte[] WrapCommandAPDU(Stream command, ref int sequenceIdx)

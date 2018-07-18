@@ -1,4 +1,4 @@
-﻿using Hid.Net;
+﻿using LedgerWallet.HIDProviders;
 using LedgerWallet.Transports;
 using Microsoft.Win32.SafeHandles;
 using NBitcoin;
@@ -9,30 +9,11 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace LedgerWallet.Transports
 {
-	public class VendorProductIds
-	{
-		public VendorProductIds(int vendorId)
-		{
-			VendorId = vendorId;
-		}
-		public VendorProductIds(int vendorId, int? productId)
-		{
-			VendorId = vendorId;
-			ProductId = productId;
-		}
-		public int VendorId
-		{
-			get; set;
-		}
-		public int? ProductId
-		{
-			get; set;
-		}
-	}
 	public class HIDLedgerTransport : HIDTransportBase
 	{
 		const int TAG_APDU = 0x05;
@@ -43,21 +24,21 @@ namespace LedgerWallet.Transports
 			new VendorProductIds(0x2581, 0x3b7c)
 		};
 
-		public HIDLedgerTransport(string devicePath, IHidDevice device) : base(devicePath, device, null)
+		public HIDLedgerTransport(IHIDDevice device) : base(device, null)
 		{
 		}
 
 		static readonly HIDDeviceTransportRegistry<HIDLedgerTransport> _Registry;
 		static HIDLedgerTransport()
 		{
-			_Registry = new HIDDeviceTransportRegistry<HIDLedgerTransport>((path, d) => new HIDLedgerTransport(path, d));
+			_Registry = new HIDDeviceTransportRegistry<HIDLedgerTransport>((d) => new HIDLedgerTransport(d));
 		}
 
 		static UsageSpecification[] _UsageSpecification = new[] { new UsageSpecification(0xffa0, 0x01) };
-		public static Task<IEnumerable<HIDLedgerTransport>> GetHIDTransportsAsync(IEnumerable<VendorProductIds> ids = null)
+		public static Task<IEnumerable<HIDLedgerTransport>> GetHIDTransportsAsync(IEnumerable<VendorProductIds> ids = null, CancellationToken cancellation = default(CancellationToken))
 		{
 			ids = ids ?? WellKnownLedgerWallets;
-			return _Registry.GetHIDTransportsAsync(ids, _UsageSpecification);
+			return _Registry.GetHIDTransportsAsync(ids, _UsageSpecification, cancellation);
 		}
 
         const int DEFAULT_LEDGER_CHANNEL = 0x0101;
