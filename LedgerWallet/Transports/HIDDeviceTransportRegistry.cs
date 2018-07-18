@@ -41,6 +41,7 @@ namespace LedgerWallet.Transports
                 if(_TransportsByDevicePath.TryGetValue(uniqueId, out transport))
                     return transport;
                 var windowsHidDevice = new WindowsHidDevice(device);
+                windowsHidDevice.DataHasExtraByte = true;
                 if(!windowsHidDevice.IsInitialized)
                     await windowsHidDevice.InitializeAsync();
                 transport = create(device.DevicePath, windowsHidDevice);
