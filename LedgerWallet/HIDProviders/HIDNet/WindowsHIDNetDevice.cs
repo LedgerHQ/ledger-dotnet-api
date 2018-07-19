@@ -12,13 +12,23 @@ namespace LedgerWallet.HIDProviders.HIDNet
     public class WindowsHIDNetDevice : HIDNetDevice
     {
         Hid.Net.WindowsHidDevice _Windows;
-        public WindowsHIDNetDevice(Hid.Net.DeviceInformation deviceInfo) : base(deviceInfo, new Hid.Net.WindowsHidDevice(deviceInfo)
+        internal readonly Hid.Net.DeviceInformation _DeviceInformation;
+
+        public override string DevicePath => _DeviceInformation.DevicePath;
+
+        public WindowsHIDNetDevice(Hid.Net.DeviceInformation deviceInfo) : base(new Hid.Net.WindowsHidDevice(deviceInfo)
         {
             DataHasExtraByte = true
         })
         {
             _Windows = (Hid.Net.WindowsHidDevice)base._Device;
+
+            if(deviceInfo == null)
+                throw new ArgumentNullException(nameof(deviceInfo));
+
+            _DeviceInformation = deviceInfo;
         }
+
         public override IHIDDevice Clone()
         {
             return new WindowsHIDNetDevice(_DeviceInformation);
