@@ -8,6 +8,7 @@ using Android.Views;
 using Android.Widget;
 using Hid.Net.Android;
 using LedgerWallet;
+using LedgerWallet.HIDProviders.HIDNet;
 using LedgerWallet.Transports;
 using System;
 using System.Threading.Tasks;
@@ -48,7 +49,8 @@ namespace LedgerWalletAndroidSample
             try
             {
                 await Task.Delay(1000);
-                var ledgerTransport = new HIDLedgerTransport(_LedgerHidDevice);
+                var androidHIDNetDevice = new AndroidHIDNetDevice(_LedgerHidDevice);
+                var ledgerTransport = new HIDLedgerTransport(androidHIDNetDevice);
                 var ledgerClient = new LedgerClient(ledgerTransport);
                 var firmwareVersion = await ledgerClient.GetFirmwareVersionAsync();
                 var formattedVersion = $"{firmwareVersion.Major}.{firmwareVersion.Minor}.{firmwareVersion.Patch}";
