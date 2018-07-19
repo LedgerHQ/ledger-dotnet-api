@@ -53,8 +53,8 @@ namespace LedgerWalletAndroidSample
                 var ledgerTransport = new HIDLedgerTransport(androidHIDNetDevice);
                 var ledgerClient = new LedgerClient(ledgerTransport);
                 var firmwareVersion = await ledgerClient.GetFirmwareVersionAsync();
-                var formattedVersion = $"{firmwareVersion.Major}.{firmwareVersion.Minor}.{firmwareVersion.Patch}";
-                Toast.MakeText(ApplicationContext, formattedVersion, ToastLength.Long).Show();
+                var formattedVersion = $"Firmware Version: {firmwareVersion.Major}.{firmwareVersion.Minor}.{firmwareVersion.Patch}";
+                FindViewById<TextView>(Resource.Id.TheTextView).Text = formattedVersion;
             }
             catch (Exception ex)
             {
