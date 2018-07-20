@@ -104,15 +104,14 @@
     <AndroidResource Include="Resources\xml\device_filter.xml" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="Hid.Net">
+      <Version>1.1.5</Version>
+    </PackageReference>
     <PackageReference Include="Xamarin.Android.Support.Design">
       <Version>25.4.0.2</Version>
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\hid.net\Hid.Net.Android\Hid.Net.Android.csproj">
-      <Project>{a6fb0608-0d21-4892-adce-3e79abcc030d}</Project>
-      <Name>Hid.Net.Android</Name>
-    </ProjectReference>
     <ProjectReference Include="..\LedgerWallet\LedgerWallet.csproj">
       <Project>{0f58b917-740d-4a5f-ab3d-0a7dfc7c1856}</Project>
       <Name>LedgerWallet</Name>

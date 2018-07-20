@@ -1,6 +1,5 @@
 ﻿using Android.Content;
 using Android.Hardware.Usb;
-using Hid.Net;
 using Hid.Net.Android;
 using System.Collections.Generic;
 using System.Linq;
@@ -38,9 +37,9 @@ namespace LedgerWallet.HIDProviders.HIDNet
 
         public Task<IEnumerable<HIDDeviceInformation>> EnumerateDeviceDescriptions(IEnumerable<VendorProductIds> vendorProductIds, UsageSpecification [] acceptedUsages)
         {
-            List<DeviceInformation> devices = new List<DeviceInformation>();
+            List<UsbDevice> devices = new List<UsbDevice>();
 
-            var collection = WindowsHidDevice.GetConnectedDeviceInformations();
+            var collection = UsbManager.DeviceList.Values;
 
             foreach (var ids in vendorProductIds)
             {
@@ -50,17 +49,19 @@ namespace LedgerWallet.HIDProviders.HIDNet
                     devices.AddRange(collection.Where(c => c.VendorId == ids.VendorId && c.ProductId == ids.ProductId));
 
             }
-            var retVal = devices
-                .Where(d =>
-                acceptedUsages == null ||
-                acceptedUsages.Length == 0 ||
-                acceptedUsages.Any(u => d.UsagePage == u.UsagePage && d.Usage == u.Usage)).ToList();
 
-            return Task.FromResult<IEnumerable<HIDDeviceInformation>>(retVal.Select(r => new HIDDeviceInformation()
+            //TODO: Filter by usage page. It's not clear how to do this on Android
+            //var retVal = devices
+            //    .Where(d =>
+            //    acceptedUsages == null ||
+            //    acceptedUsages.Length == 0 ||
+            //    acceptedUsages.Any(u => d.UsagePage == u.UsagePage && d.Usage == u.Usage)).ToList();
+
+            return Task.FromResult<IEnumerable<HIDDeviceInformation>>(devices.Select(r => new HIDDeviceInformation()
             {
-                ProductId = r.ProductId,
-                VendorId = r.VendorId,
-                DevicePath = r.DevicePath,
+                ProductId = (ushort)r.ProductId,
+                VendorId = (ushort)r.VendorId,
+                DevicePath = r.DeviceId.ToString(),
                 ProviderInformation = r
             }));
         }

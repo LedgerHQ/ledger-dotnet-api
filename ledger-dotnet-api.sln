@@ -10,8 +10,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LedgerWallet.TestsCore", "L
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LedgerWalletAndroidSample", "LedgerWalletAndroidSample\LedgerWalletAndroidSample.csproj", "{3BC0AC7E-3B3B-4D3F-9CC0-B2BDECC460A6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hid.Net.Android", "..\hid.net\Hid.Net.Android\Hid.Net.Android.csproj", "{A6FB0608-0D21-4892-ADCE-3E79ABCC030D}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -76,18 +74,6 @@ Global
 		{3BC0AC7E-3B3B-4D3F-9CC0-B2BDECC460A6}.Release|x86.ActiveCfg = Release|Any CPU
 		{3BC0AC7E-3B3B-4D3F-9CC0-B2BDECC460A6}.Release|x86.Build.0 = Release|Any CPU
 		{3BC0AC7E-3B3B-4D3F-9CC0-B2BDECC460A6}.Release|x86.Deploy.0 = Release|Any CPU
-		{A6FB0608-0D21-4892-ADCE-3E79ABCC030D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A6FB0608-0D21-4892-ADCE-3E79ABCC030D}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A6FB0608-0D21-4892-ADCE-3E79ABCC030D}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{A6FB0608-0D21-4892-ADCE-3E79ABCC030D}.Debug|x64.Build.0 = Debug|Any CPU
-		{A6FB0608-0D21-4892-ADCE-3E79ABCC030D}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{A6FB0608-0D21-4892-ADCE-3E79ABCC030D}.Debug|x86.Build.0 = Debug|Any CPU
-		{A6FB0608-0D21-4892-ADCE-3E79ABCC030D}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A6FB0608-0D21-4892-ADCE-3E79ABCC030D}.Release|Any CPU.Build.0 = Release|Any CPU
-		{A6FB0608-0D21-4892-ADCE-3E79ABCC030D}.Release|x64.ActiveCfg = Release|Any CPU
-		{A6FB0608-0D21-4892-ADCE-3E79ABCC030D}.Release|x64.Build.0 = Release|Any CPU
-		{A6FB0608-0D21-4892-ADCE-3E79ABCC030D}.Release|x86.ActiveCfg = Release|Any CPU
-		{A6FB0608-0D21-4892-ADCE-3E79ABCC030D}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
