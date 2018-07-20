@@ -24,13 +24,7 @@ namespace LedgerWallet.HIDProviders.HIDNet
 
         public IHIDDevice CreateFromDescription(HIDDeviceInformation hidDevice)
         {
-            var ledgerUsbDevice = UsbManager.DeviceList.Values.FirstOrDefault(d => d.VendorId == hidDevice.VendorId && d.ProductId == hidDevice.ProductId);
-            if (ledgerUsbDevice == null)
-            {
-                return null;
-            }
-
-            var androidHidDevice = new AndroidHidDevice(UsbManager, AndroidContext, TimeoutMilliseconds, ReadBufferLength, ledgerUsbDevice);
+            var androidHidDevice = new AndroidHidDevice(UsbManager, AndroidContext, TimeoutMilliseconds, ReadBufferLength, hidDevice.VendorId, hidDevice.ProductId);
 
             return new AndroidHIDNetDevice(androidHidDevice);
         }
