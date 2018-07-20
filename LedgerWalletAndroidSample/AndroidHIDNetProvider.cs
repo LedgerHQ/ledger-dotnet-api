@@ -1,19 +1,39 @@
-﻿using LedgerWallet.Transports;
-using System.Linq;
-using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Android.Content;
+using Android.Hardware.Usb;
 using Hid.Net;
-using LedgerWallet.HIDProviders;
+using Hid.Net.Android;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace LedgerWallet.HIDProviders.HIDNet
 {
     public class AndroidHIDNetProvider : IHIDProvider
     {
+        public UsbManager UsbManager { get; private set; }
+        public Context AndroidContext { get; private set; }
+        public int TimeoutMilliseconds { get; private set; }
+        public int ReadBufferLength { get; private set; }
+
+        public AndroidHIDNetProvider(UsbManager usbManager, Context androidContext, int timeoutMilliseconds, int readBufferLength)
+        {
+            UsbManager = usbManager;
+            AndroidContext = androidContext;
+            TimeoutMilliseconds = timeoutMilliseconds;
+            ReadBufferLength = readBufferLength;
+        }
+
         public IHIDDevice CreateFromDescription(HIDDeviceInformation hidDevice)
         {
-            return new AndroidHIDNetDevice(hidDevice);
+            var ledgerUsbDevice = UsbManager.DeviceList.Values.FirstOrDefault(d => d.VendorId == hidDevice.VendorId && d.ProductId == hidDevice.ProductId);
+            if (ledgerUsbDevice == null)
+            {
+                return null;
+            }
+
+            var androidHidDevice = new AndroidHidDevice(UsbManager, AndroidContext, TimeoutMilliseconds, ReadBufferLength, ledgerUsbDevice);
+
+            return new AndroidHIDNetDevice(androidHidDevice);
         }
 
         public Task<IEnumerable<HIDDeviceInformation>> EnumerateDeviceDescriptions(IEnumerable<VendorProductIds> vendorProductIds, UsageSpecification [] acceptedUsages)
