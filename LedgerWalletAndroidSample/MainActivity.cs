@@ -52,11 +52,8 @@ namespace LedgerWalletAndroidSample
             {
                 await Task.Delay(1000);
 
-
                 HIDProvider.Provider = new AndroidHIDNetProvider(_LedgerHidDevice);
 
-                //var ledgerTransport = new HIDLedgerTransport(androidHIDNetDevice);
-                //var ledgerClient = new LedgerClient(ledgerTransport);
                 var ledger = (await LedgerClient.GetHIDLedgersAsync()).First();
                 var firmwareVersion = await ledger.GetFirmwareVersionAsync();
                 var formattedVersion = $"Firmware Version: {firmwareVersion.Major}.{firmwareVersion.Minor}.{firmwareVersion.Patch}";
