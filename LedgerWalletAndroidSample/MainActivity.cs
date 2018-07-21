@@ -8,15 +8,17 @@ using Android.Views;
 using Android.Widget;
 using Hid.Net.Android;
 using LedgerWallet;
+using LedgerWallet.HIDProviders;
 using LedgerWallet.HIDProviders.HIDNet;
 using LedgerWallet.Transports;
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace LedgerWalletAndroidSample
 {
     [Activity(Label = "@string/app_name", Theme = "@style/AppTheme.NoActionBar", MainLauncher = true)]
-    [IntentFilter(new[] { UsbManager.ActionUsbDeviceAttached })]
+    [IntentFilter(new [] { UsbManager.ActionUsbDeviceAttached })]
     [MetaData(UsbManager.ActionUsbDeviceAttached, Resource = "@xml/device_filter")]
     public class MainActivity : AppCompatActivity
     {
@@ -29,9 +31,12 @@ namespace LedgerWalletAndroidSample
         {
             base.OnCreate(savedInstanceState);
 
+            //Uncomment this if you want to connect based on the even of when the Ledger is connected
             _LedgerHidDevice = new AndroidHidDevice(GetSystemService(UsbService) as UsbManager, ApplicationContext, 3000, 64, 11415, 1);
-
             _LedgerHidDevice.Connected += _LedgerHidDevice_Connected;
+
+            //Gives the Ledger library a provider for dealing with connected devices
+            HIDProvider.Provider = new AndroidHIDNetProvider(GetSystemService(UsbService) as UsbManager, ApplicationContext, 3000, 64);
 
             RegisterReceiver();
 
@@ -49,17 +54,26 @@ namespace LedgerWalletAndroidSample
             try
             {
                 await Task.Delay(1000);
-                var androidHIDNetDevice = new AndroidHIDNetDevice(_LedgerHidDevice);
-                var ledgerTransport = new HIDLedgerTransport(androidHIDNetDevice);
-                var ledgerClient = new LedgerClient(ledgerTransport);
-                var firmwareVersion = await ledgerClient.GetFirmwareVersionAsync();
-                var formattedVersion = $"Firmware Version: {firmwareVersion.Major}.{firmwareVersion.Minor}.{firmwareVersion.Patch}";
-                FindViewById<TextView>(Resource.Id.TheTextView).Text = formattedVersion;
+
+                var ledgerClient = (await LedgerClient.GetHIDLedgersAsync()).First();
+
+                //var androidHIDNetDevice = new AndroidHIDNetDevice(_LedgerHidDevice);
+                //var ledgerTransport = new HIDLedgerTransport(androidHIDNetDevice);
+                //var ledgerClient = new LedgerClient(ledgerTransport);
+
+                await DisplayFirmwareVersion(ledgerClient);
             }
             catch (Exception ex)
             {
                 Toast.MakeText(ApplicationContext, ex.ToString(), ToastLength.Long).Show();
             }
+        }
+
+        private async Task DisplayFirmwareVersion(LedgerClient ledgerClient)
+        {
+            var firmwareVersion = await ledgerClient.GetFirmwareVersionAsync();
+            var formattedVersion = $"Firmware Version: {firmwareVersion.Major}.{firmwareVersion.Minor}.{firmwareVersion.Patch}";
+            FindViewById<TextView>(Resource.Id.TheTextView).Text = formattedVersion;
         }
 
         public override bool OnCreateOptionsMenu(IMenu menu)

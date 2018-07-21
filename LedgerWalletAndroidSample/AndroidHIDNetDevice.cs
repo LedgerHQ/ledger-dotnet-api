@@ -16,12 +16,23 @@ namespace LedgerWallet.HIDProviders.HIDNet
 
         public override IHIDDevice Clone()
         {
-            throw new NotImplementedException();
+            return new AndroidHIDNetDevice(_AndroidHidDevice);
         }
 
-        public override Task EnsureInitializedAsync(CancellationToken cancellation)
+        public async override Task EnsureInitializedAsync(CancellationToken cancellation)
         {
-            throw new NotImplementedException();
+            try
+            {
+                var isConnected = !await _AndroidHidDevice.GetIsConnectedAsync();
+                if (!isConnected)
+                {
+                    throw new Exception("There is no Ledger connected to your Android device");
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new HIDDeviceException($"The following error occurred while attempting to connect to the Ledger.\r\n{ex.Message}", ex);
+            }
         }
     }
 }
