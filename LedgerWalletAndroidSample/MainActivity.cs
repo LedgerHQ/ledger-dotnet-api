@@ -8,15 +8,17 @@ using Android.Views;
 using Android.Widget;
 using Hid.Net.Android;
 using LedgerWallet;
+using LedgerWallet.HIDProviders;
 using LedgerWallet.HIDProviders.HIDNet;
 using LedgerWallet.Transports;
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace LedgerWalletAndroidSample
 {
     [Activity(Label = "@string/app_name", Theme = "@style/AppTheme.NoActionBar", MainLauncher = true)]
-    [IntentFilter(new[] { UsbManager.ActionUsbDeviceAttached })]
+    [IntentFilter(new [] { UsbManager.ActionUsbDeviceAttached })]
     [MetaData(UsbManager.ActionUsbDeviceAttached, Resource = "@xml/device_filter")]
     public class MainActivity : AppCompatActivity
     {
@@ -49,10 +51,14 @@ namespace LedgerWalletAndroidSample
             try
             {
                 await Task.Delay(1000);
-                var androidHIDNetDevice = new AndroidHIDNetDevice(_LedgerHidDevice);
-                var ledgerTransport = new HIDLedgerTransport(androidHIDNetDevice);
-                var ledgerClient = new LedgerClient(ledgerTransport);
-                var firmwareVersion = await ledgerClient.GetFirmwareVersionAsync();
+
+
+                HIDProvider.Provider = new AndroidHIDNetProvider(_LedgerHidDevice);
+
+                //var ledgerTransport = new HIDLedgerTransport(androidHIDNetDevice);
+                //var ledgerClient = new LedgerClient(ledgerTransport);
+                var ledger = (await LedgerClient.GetHIDLedgersAsync()).First();
+                var firmwareVersion = await ledger.GetFirmwareVersionAsync();
                 var formattedVersion = $"Firmware Version: {firmwareVersion.Major}.{firmwareVersion.Minor}.{firmwareVersion.Patch}";
                 FindViewById<TextView>(Resource.Id.TheTextView).Text = formattedVersion;
             }

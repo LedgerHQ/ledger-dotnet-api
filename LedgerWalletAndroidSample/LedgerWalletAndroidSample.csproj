@@ -59,6 +59,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AndroidHIDNetDevice.cs" />
+    <Compile Include="AndroidHIDNetProvider.cs" />
     <Compile Include="MainActivity.cs" />
     <Compile Include="Resources\Resource.Designer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -104,7 +105,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Hid.Net">
-      <Version>1.1.4</Version>
+      <Version>1.1.6</Version>
     </PackageReference>
     <PackageReference Include="Xamarin.Android.Support.Design">
       <Version>25.4.0.2</Version>

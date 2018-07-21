@@ -16,12 +16,17 @@ namespace LedgerWallet.HIDProviders.HIDNet
 
         public override IHIDDevice Clone()
         {
-            throw new NotImplementedException();
+            return new AndroidHIDNetDevice(_AndroidHidDevice);
         }
 
-        public override Task EnsureInitializedAsync(CancellationToken cancellation)
+        public async override Task EnsureInitializedAsync(CancellationToken cancellation)
         {
-            throw new NotImplementedException();
+            if (_AndroidHidDevice.IsInitialized)
+            {
+                return;
+            }
+
+            await _AndroidHidDevice.InitializeAsync();
         }
     }
 }
