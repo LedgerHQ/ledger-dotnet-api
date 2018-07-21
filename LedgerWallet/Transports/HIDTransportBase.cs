@@ -109,6 +109,10 @@ namespace LedgerWallet.Transports
                     resultList.Add(result);
                 }
             }
+            catch
+            {
+                return null;
+            }
             finally
             {
                 _SemaphoreSlim.Release();
