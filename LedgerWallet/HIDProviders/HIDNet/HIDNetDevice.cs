@@ -10,22 +10,19 @@ namespace LedgerWallet.HIDProviders.HIDNet
     public abstract class HIDNetDevice : IHIDDevice
     {
         internal readonly Hid.Net.IHidDevice _Device;
-        internal readonly Hid.Net.DeviceInformation _DeviceInformation;
-        public HIDNetDevice(Hid.Net.DeviceInformation deviceInformation, Hid.Net.IHidDevice hid)
+        public HIDNetDevice(Hid.Net.IHidDevice hid)
         {
             if(hid == null)
                 throw new ArgumentNullException(nameof(hid));
-            if(deviceInformation == null)
-                throw new ArgumentNullException(nameof(deviceInformation));
-            _Device = hid;
-            _DeviceInformation = deviceInformation;
-        }
 
-        public string DevicePath => _DeviceInformation.DevicePath;
+            _Device = hid;
+        }
 
         public int VendorId => _Device.VendorId;
 
         public int ProductId => _Device.ProductId;
+
+        public virtual string DevicePath => null;
 
         public abstract IHIDDevice Clone();
 
@@ -36,7 +33,7 @@ namespace LedgerWallet.HIDProviders.HIDNet
             return _Device.GetIsConnectedAsync();
         }
 
-        public async Task<byte[]> ReadAsync(CancellationToken cancellation)
+        public async Task<byte []> ReadAsync(CancellationToken cancellation)
         {
             //Note: this method used to read 64 bytes and shift that right in to an array of 65 bytes
             //Android does this automatically, so, we can't do this here for compatibility with Android.
@@ -52,7 +49,7 @@ namespace LedgerWallet.HIDProviders.HIDNet
             }
         }
 
-        public async Task WriteAsync(byte[] buffer, int offset, int length, CancellationToken cancellation)
+        public async Task WriteAsync(byte [] buffer, int offset, int length, CancellationToken cancellation)
         {
             //Note: this method used to take 64 bytes and shift that right in to an array of 65 bytes and then write to the device
             //Android does this automatically, so, we can't do this here for compatibility with Android.
@@ -60,7 +57,7 @@ namespace LedgerWallet.HIDProviders.HIDNet
 
             if(offset != 0 || length != buffer.Length)
             {
-                var newBuffer = new byte[buffer.Length - offset];
+                var newBuffer = new byte [buffer.Length - offset];
                 Buffer.BlockCopy(buffer, offset, newBuffer, 0, length);
                 buffer = newBuffer;
             }
