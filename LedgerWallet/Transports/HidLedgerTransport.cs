@@ -42,9 +42,9 @@ namespace LedgerWallet.Transports
 		{
 			var output = new MemoryStream();
 			var position = (int)output.Position;
-			output.WriteByte((byte)((DEFAULT_LEDGER_CHANNEL >> 8) & 0xff));
-			output.WriteByte((byte)(DEFAULT_LEDGER_CHANNEL & 0xff));
-			output.WriteByte((byte)TAG_APDU);
+			output.WriteByte((DEFAULT_LEDGER_CHANNEL >> 8) & 0xff);
+			output.WriteByte(DEFAULT_LEDGER_CHANNEL & 0xff);
+			output.WriteByte(TAG_APDU);
 			output.WriteByte((byte)((sequenceIdx >> 8) & 0xff));
 			output.WriteByte((byte)(sequenceIdx & 0xff));
 			if(sequenceIdx == 0)

@@ -185,8 +185,8 @@ namespace LedgerWallet
 				{
 					throw new LedgerWalletException("Truncated response");
 				}
-				var sw = ((int)(response[response.Length - 2] & 0xff) << 8) |
-						(int)(response[response.Length - 1] & 0xff);
+				var sw = ((response[response.Length - 2] & 0xff) << 8) |
+						response[response.Length - 1] & 0xff;
 				if(sw == 0x6faa)
 					Throw(sw);
 				var result = new byte[response.Length - 2];
