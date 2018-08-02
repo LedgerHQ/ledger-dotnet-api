@@ -54,6 +54,14 @@ namespace LedgerWallet.Tests
             await ledger.GetWalletPubKeyAsync(path, LedgerClient.AddressType.Segwit, false);
         }
 
+        [Fact]
+        [Trait("Manual", "Manual")]
+        public async Task GetCoinVersion()
+        {
+            var ledger = (await LedgerClient.GetHIDLedgersAsync()).First();
+            var coinVersion = await ledger.GetCoinVersion();
+        }
+
         private async Task CanSignTransactionStandardModeCore(bool segwit)
         {
             var ledger = (await LedgerClient.GetHIDLedgersAsync()).First();

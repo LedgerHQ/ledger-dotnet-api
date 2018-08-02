@@ -35,6 +35,12 @@ namespace LedgerWallet
 			return new LedgerWalletFirmware(response);
 		}
 
+		public async Task<GetCoinVersionResult> GetCoinVersion(CancellationToken cancellation = default(CancellationToken))
+		{
+			byte[] response = await ExchangeSingleAPDUAsync(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_BTCHIP_INS_GET_COIN_VER, 0x00, 0x00, 0x00, OK, cancellation).ConfigureAwait(false);
+			return new GetCoinVersionResult(response);
+		}
+
 		[Flags]
 		public enum AddressType
 		{
