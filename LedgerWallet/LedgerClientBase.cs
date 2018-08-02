@@ -32,9 +32,7 @@ namespace LedgerWallet
 
 		public LedgerClientBase(ILedgerTransport transport)
 		{
-			if(transport == null)
-				throw new ArgumentNullException("transport");
-			_Transport = transport;
+			_Transport = transport ?? throw new ArgumentNullException("transport");
 		}
 
 		protected byte[] CreateAPDU(byte cla, byte ins, byte p1, byte p2, byte[] data)

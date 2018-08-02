@@ -16,9 +16,7 @@ namespace LedgerWallet.Transports
 
         protected HIDTransportBase(IHIDDevice device, UsageSpecification[] acceptedUsageSpecifications)
         {
-            if(device == null)
-                throw new ArgumentNullException(nameof(device));
-            _Device = device;
+			_Device = device ?? throw new ArgumentNullException(nameof(device));
 
             _VendorProductIds = new VendorProductIds(device.VendorId, device.ProductId);
             _AcceptedUsageSpecifications = acceptedUsageSpecifications;

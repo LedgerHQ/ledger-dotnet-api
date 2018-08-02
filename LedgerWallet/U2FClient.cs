@@ -56,9 +56,7 @@ namespace LedgerWallet.U2F
 
 		public AppId(byte[] bytes)
 		{
-			if(bytes == null)
-				throw new ArgumentNullException("bytes");
-			_Bytes = bytes;
+			_Bytes = bytes ?? throw new ArgumentNullException("bytes");
 			if(_Bytes.Length != 32)
 				throw new ArgumentException("An ApplicationId should be 32 bytes");
 		}

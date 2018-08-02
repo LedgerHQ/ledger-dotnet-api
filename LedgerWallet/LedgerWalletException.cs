@@ -22,9 +22,7 @@ namespace LedgerWallet
 		public LedgerWalletException(string message, LedgerWalletStatus sw)
 			: base(message)
 		{
-			if(sw == null)
-				throw new ArgumentNullException("sw");
-			_Status = sw;
+			_Status = sw ?? throw new ArgumentNullException("sw");
 		}
 
 		private readonly LedgerWalletStatus _Status;
