@@ -14,18 +14,9 @@ namespace LedgerWallet.Transports
 	{
 		public U2FException(byte errorCode) : base(GetErrorMessage(errorCode))
 		{
-			_U2FError = errorCode;
+			U2FError = errorCode;
 		}
-
-
-		private readonly byte _U2FError;
-		public byte U2FError
-		{
-			get
-			{
-				return _U2FError;
-			}
-		}
+		public byte U2FError { get; private set; }
 
 		const int ERR_NONE = 0;
 		const int ERR_INVALID_CMD = 1;

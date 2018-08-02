@@ -414,78 +414,21 @@ namespace LedgerWallet
 
 		public LedgerWalletFirmware(byte[] bytes)
 		{
-			_Features = (FirmwareFeatures)(bytes[0] & ~0xC0);
-			_Architecture = bytes[1];
-			_Major = bytes[2];
-			_Minor = bytes[3];
-			_Patch = bytes[4];
-			_LoaderMinor = bytes[5];
-			_LoaderMajor = bytes[6];
+			Features = (FirmwareFeatures)(bytes[0] & ~0xC0);
+			Architecture = bytes[1];
+			Major = bytes[2];
+			Minor = bytes[3];
+			Patch = bytes[4];
+			LoaderMinor = bytes[5];
+			LoaderMajor = bytes[6];
 		}
-
-		private readonly FirmwareFeatures _Features;
-		public FirmwareFeatures Features
-		{
-			get
-			{
-				return _Features;
-			}
-		}
-
-		private readonly byte _Architecture;
-		public byte Architecture
-		{
-			get
-			{
-				return _Architecture;
-			}
-		}
-
-		private readonly byte _Major;
-		public byte Major
-		{
-			get
-			{
-				return _Major;
-			}
-		}
-
-		private readonly byte _Minor;
-		public byte Minor
-		{
-			get
-			{
-				return _Minor;
-			}
-		}
-
-		private readonly byte _Patch;
-		public byte Patch
-		{
-			get
-			{
-				return _Patch;
-			}
-		}
-
-
-		private readonly byte _LoaderMajor;
-		public byte LoaderMajor
-		{
-			get
-			{
-				return _LoaderMajor;
-			}
-		}
-
-		private readonly byte _LoaderMinor;
-		public byte LoaderMinor
-		{
-			get
-			{
-				return _LoaderMinor;
-			}
-		}
+		public FirmwareFeatures Features { get; private set; }
+		public byte Architecture { get; private set; }
+		public byte Major { get; private set; }
+		public byte Minor { get; private set; }
+		public byte Patch { get; private set; }
+		public byte LoaderMajor { get; private set; }
+		public byte LoaderMinor { get; private set; }
 
 		public override string ToString()
 		{

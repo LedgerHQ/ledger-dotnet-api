@@ -22,33 +22,18 @@ namespace LedgerWallet
 		public LedgerWalletException(string message, LedgerWalletStatus sw)
 			: base(message)
 		{
-			_Status = sw ?? throw new ArgumentNullException("sw");
+			Status = sw ?? throw new ArgumentNullException("sw");
 		}
-
-		private readonly LedgerWalletStatus _Status;
-		public LedgerWalletStatus Status
-		{
-			get
-			{
-				return _Status;
-			}
-		}
+		public LedgerWalletStatus Status { get; private set; }
 	}
 
 	public class LedgerWalletStatus
 	{
 		public LedgerWalletStatus(int sw)
 		{
-			_SW = sw;
+			SW = sw;
 		}
-		private readonly int _SW;
-		public int SW
-		{
-			get
-			{
-				return _SW;
-			}
-		}
+		public int SW { get; private set; }
 
 		public WellKnownSW KnownSW
 		{
@@ -62,8 +47,8 @@ namespace LedgerWallet
 		{
 			get
 			{
-				if((_SW & 0xFF00) == 0x6F00)
-					return _SW & 0x00FF;
+				if((SW & 0xFF00) == 0x6F00)
+					return SW & 0x00FF;
 				return 0;
 			}
 		}

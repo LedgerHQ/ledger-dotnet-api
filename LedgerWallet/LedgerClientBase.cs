@@ -21,18 +21,11 @@ namespace LedgerWallet
 	public abstract class LedgerClientBase
 	{
 		public static int[] OK = new[] { LedgerWalletConstants.SW_OK };
-		readonly ILedgerTransport _Transport;
-		public ILedgerTransport Transport
-		{
-			get
-			{
-				return _Transport;
-			}
-		}
+		public ILedgerTransport Transport { get; private set; }
 
 		public LedgerClientBase(ILedgerTransport transport)
 		{
-			_Transport = transport ?? throw new ArgumentNullException("transport");
+			Transport = transport ?? throw new ArgumentNullException("transport");
 		}
 
 		protected byte[] CreateAPDU(byte cla, byte ins, byte p1, byte p2, byte[] data)
