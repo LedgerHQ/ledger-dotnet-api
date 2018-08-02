@@ -13,11 +13,11 @@
         }
         public int VendorId
         {
-            get; set;
+            get;
         }
         public int? ProductId
         {
-            get; set;
+            get;
         }
     }
 }

@@ -24,7 +24,7 @@ namespace LedgerWallet
 		{
 			Status = sw ?? throw new ArgumentNullException("sw");
 		}
-		public LedgerWalletStatus Status { get; private set; }
+		public LedgerWalletStatus Status { get; }
 	}
 
 	public class LedgerWalletStatus
@@ -33,7 +33,7 @@ namespace LedgerWallet
 		{
 			SW = sw;
 		}
-		public int SW { get; private set; }
+		public int SW { get; }
 
 		public WellKnownSW KnownSW
 		{

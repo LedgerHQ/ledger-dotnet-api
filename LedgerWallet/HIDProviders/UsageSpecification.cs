@@ -11,12 +11,10 @@
         public ushort Usage
         {
             get;
-            private set;
         }
         public ushort UsagePage
         {
             get;
-            private set;
         }
     }
 }

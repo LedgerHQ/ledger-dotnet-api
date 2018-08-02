@@ -21,7 +21,7 @@ namespace LedgerWallet
 	public abstract class LedgerClientBase
 	{
 		public static int[] OK = new[] { LedgerWalletConstants.SW_OK };
-		public ILedgerTransport Transport { get; private set; }
+		public ILedgerTransport Transport { get; }
 
 		public LedgerClientBase(ILedgerTransport transport)
 		{

@@ -16,7 +16,7 @@ namespace LedgerWallet.Transports
 		{
 			U2FError = errorCode;
 		}
-		public byte U2FError { get; private set; }
+		public byte U2FError { get; }
 
 		const int ERR_NONE = 0;
 		const int ERR_INVALID_CMD = 1;

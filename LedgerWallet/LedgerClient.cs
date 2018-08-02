@@ -422,13 +422,13 @@ namespace LedgerWallet
 			LoaderMinor = bytes[5];
 			LoaderMajor = bytes[6];
 		}
-		public FirmwareFeatures Features { get; private set; }
-		public byte Architecture { get; private set; }
-		public byte Major { get; private set; }
-		public byte Minor { get; private set; }
-		public byte Patch { get; private set; }
-		public byte LoaderMajor { get; private set; }
-		public byte LoaderMinor { get; private set; }
+		public FirmwareFeatures Features { get; }
+		public byte Architecture { get; }
+		public byte Major { get; }
+		public byte Minor { get; }
+		public byte Patch { get; }
+		public byte LoaderMajor { get; }
+		public byte LoaderMinor { get; }
 
 		public override string ToString()
 		{
