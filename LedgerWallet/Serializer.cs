@@ -1,14 +1,9 @@
 ﻿using NBitcoin;
-using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace LedgerWallet
 {
-    class Serializer
+	class Serializer
     {
         public static byte[] Serialize(KeyPath keyPath)
         {

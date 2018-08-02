@@ -1,14 +1,11 @@
-﻿using LedgerWallet.Transports;
-using System.Linq;
-using System;
+﻿using System.Linq;
 using System.Collections.Generic;
-using System.Text;
 using System.Threading.Tasks;
 using Hid.Net;
 
 namespace LedgerWallet.HIDProviders.HIDNet
 {
-    public class WindowsHIDNetProvider : IHIDProvider
+	public class WindowsHIDNetProvider : IHIDProvider
     {
         public IHIDDevice CreateFromDescription(HIDDeviceInformation decription)
         {

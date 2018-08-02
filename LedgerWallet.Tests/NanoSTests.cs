@@ -1,20 +1,13 @@
-﻿using LedgerWallet.Transports;
-using LedgerWallet.U2F;
-using NBitcoin;
-using NBitcoin.DataEncoders;
-using System;
+﻿using NBitcoin;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
 
 
 namespace LedgerWallet.Tests
 {
-    [Trait("NanoS", "NanoS")]
+	[Trait("NanoS", "NanoS")]
     public class NanoSTests
     {
 

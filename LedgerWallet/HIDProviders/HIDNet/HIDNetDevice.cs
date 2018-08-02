@@ -1,13 +1,10 @@
-﻿using LedgerWallet.Transports;
-using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace LedgerWallet.HIDProviders.HIDNet
 {
-    public abstract class HIDNetDevice : IHIDDevice
+	public abstract class HIDNetDevice : IHIDDevice
     {
         internal readonly Hid.Net.IHidDevice _Device;
         internal readonly Hid.Net.DeviceInformation _DeviceInformation;

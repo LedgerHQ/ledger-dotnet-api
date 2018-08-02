@@ -1,13 +1,8 @@
 ﻿using NBitcoin;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace LedgerWallet
 {
-    class BufferUtils
+	class BufferUtils
     {
         internal static void WriteUint32BE(System.IO.Stream data, long index)
         {

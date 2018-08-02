@@ -1,9 +1,8 @@
 ﻿using NBitcoin.DataEncoders;
-using System;
 
 namespace LedgerWallet
 {
-    public class LedgerWalletConstants
+	public class LedgerWalletConstants
     {
         public const byte LedgerWallet_CLA = 224;
 

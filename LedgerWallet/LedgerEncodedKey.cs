@@ -1,13 +1,10 @@
 ﻿using NBitcoin.DataEncoders;
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace LedgerWallet
 {
-    public class LedgerEncodedKey
+	public class LedgerEncodedKey
     {
         byte[] _Key;
         public LedgerEncodedKey(byte[] key)
