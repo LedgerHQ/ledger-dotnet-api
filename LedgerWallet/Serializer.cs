@@ -8,9 +8,9 @@ namespace LedgerWallet
         public static byte[] Serialize(KeyPath keyPath)
         {
             Guard.AssertKeyPath(keyPath);
-            MemoryStream ms = new MemoryStream();
+            var ms = new MemoryStream();
             ms.WriteByte((byte)keyPath.Indexes.Length);
-            for(int i = 0; i < keyPath.Indexes.Length; i++)
+            for(var i = 0; i < keyPath.Indexes.Length; i++)
             {
                 var bytes = ToBytes(keyPath.Indexes[i], false);
                 ms.Write(bytes, 0, bytes.Length);

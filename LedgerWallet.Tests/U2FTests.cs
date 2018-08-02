@@ -22,7 +22,7 @@ namespace LedgerWallet.Tests
 
 			// Refuse registration
 			Debugger.Break();
-			CancellationTokenSource cts = new CancellationTokenSource();
+			var cts = new CancellationTokenSource();
 			cts.CancelAfter(5000);
 			await Assert.ThrowsAsync<OperationCanceledException>(async () => await u2f.RegisterAsync(challenge, appId, cts.Token));
 

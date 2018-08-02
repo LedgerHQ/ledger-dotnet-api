@@ -25,7 +25,7 @@ namespace LedgerWallet
 
         public async Task<LedgerWalletFirmware> GetFirmwareVersionAsync(CancellationToken cancellation = default(CancellationToken))
 		{
-			byte[] response = await ExchangeSingleAPDUAsync(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_FIRMWARE_VERSION, (byte)0x00, (byte)0x00, 0x00, OK, cancellation).ConfigureAwait(false);
+			var response = await ExchangeSingleAPDUAsync(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_FIRMWARE_VERSION, (byte)0x00, (byte)0x00, 0x00, OK, cancellation).ConfigureAwait(false);
 			return new LedgerWalletFirmware(response);
 		}
 
@@ -40,9 +40,9 @@ namespace LedgerWallet
 		public async Task<GetWalletPubKeyResponse> GetWalletPubKeyAsync(KeyPath keyPath, AddressType addressType = AddressType.Legacy, bool display = false, CancellationToken cancellation = default(CancellationToken))
 		{
 			Guard.AssertKeyPath(keyPath);
-			byte[] bytes = Serializer.Serialize(keyPath);
+			var bytes = Serializer.Serialize(keyPath);
 			//bytes[0] = 10;
-			byte[] response = await ExchangeSingleAPDUAsync(
+			var response = await ExchangeSingleAPDUAsync(
 				LedgerWalletConstants.LedgerWallet_CLA,
 				LedgerWalletConstants.LedgerWallet_INS_GET_WALLET_PUBLIC_KEY,
 				(byte)(display ? 1 : 0),
@@ -59,8 +59,8 @@ namespace LedgerWallet
 		{
 			Guard.AssertKeyPath(rootKeyPath);
 
-			GetWalletPubKeyResponse response = await GetWalletPubKeyAsync(rootKeyPath);
-			ExtPubKey hdKey = response.ExtendedPublicKey;
+			var response = await GetWalletPubKeyAsync(rootKeyPath);
+			var hdKey = response.ExtendedPublicKey;
 
 			var i = startAtIndex;
 			var a = 0L;
@@ -106,8 +106,8 @@ namespace LedgerWallet
 		{
 			if(outputIndex >= transaction.Outputs.Count)
 				throw new ArgumentOutOfRangeException("outputIndex is bigger than the number of outputs in the transaction", "outputIndex");
-			List<byte[]> apdus = new List<byte[]>();
-			MemoryStream data = new MemoryStream();
+			var apdus = new List<byte[]>();
+			var data = new MemoryStream();
 			// Header
 			BufferUtils.WriteUint32BE(data, outputIndex);
 			BufferUtils.WriteBuffer(data, transaction.Version);
@@ -141,7 +141,7 @@ namespace LedgerWallet
 			}
 			// Locktime
 			apdus.Add(CreateAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_TRUSTED_INPUT, (byte)0x80, (byte)0x00, transaction.LockTime.ToBytes()));
-			byte[] response = await ExchangeApdusAsync(apdus.ToArray(), OK, cancellation).ConfigureAwait(false);
+			var response = await ExchangeApdusAsync(apdus.ToArray(), OK, cancellation).ConfigureAwait(false);
 			return new TrustedInput(response);
 		}
 
@@ -159,10 +159,10 @@ namespace LedgerWallet
 			Dictionary<OutPoint, ICoin> coins,
 			bool segwitMode, bool segwitParsedOnce)
 		{
-			List<byte[]> apdus = new List<byte[]>();
+			var apdus = new List<byte[]>();
 			trustedInputs = trustedInputs ?? new Dictionary<OutPoint, TrustedInput>();
 			// Start building a fake transaction with the passed inputs
-			MemoryStream data = new MemoryStream();
+			var data = new MemoryStream();
 			BufferUtils.WriteBuffer(data, txIn.Transaction.Version);
 
 			if(segwitMode && segwitParsedOnce)
@@ -180,7 +180,7 @@ namespace LedgerWallet
 					currentIndex++;
 					continue;
 				}
-				byte[] script = new byte[0];
+				var script = new byte[0];
 				if(currentIndex == txIn.Index || segwitMode && !segwitParsedOnce)
 					script = coins[input.PrevOut].GetScriptCode().ToBytes();
 
@@ -221,23 +221,23 @@ namespace LedgerWallet
 
 		public byte[][] UntrustedHashTransactionInputFinalizeFull(KeyPath change, IEnumerable<TxOut> outputs)
 		{
-			List<byte[]> apdus = new List<byte[]>();
+			var apdus = new List<byte[]>();
 			if(change != null)
 			{
 				apdus.Add(CreateAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_HASH_INPUT_FINALIZE_FULL, 0xFF, 0x00, Serializer.Serialize(change)));
 			}
 
-			int offset = 0;
+			var offset = 0;
 			var ms = new MemoryStream();
-			BitcoinStream bs = new BitcoinStream(ms, true);
+			var bs = new BitcoinStream(ms, true);
 			var list = outputs.ToList();
 			bs.ReadWrite<List<TxOut>, TxOut>(ref list);
 			var data = ms.ToArray();
 
 			while(offset < data.Length)
 			{
-				int blockLength = ((data.Length - offset) > 255 ? 255 : data.Length - offset);
-				byte[] apdu = new byte[blockLength + 5];
+				var blockLength = ((data.Length - offset) > 255 ? 255 : data.Length - offset);
+				var apdu = new byte[blockLength + 5];
 				apdu[0] = LedgerWalletConstants.LedgerWallet_CLA;
 				apdu[1] = LedgerWalletConstants.LedgerWallet_INS_HASH_INPUT_FINALIZE_FULL;
 				apdu[2] = ((offset + blockLength) == data.Length ? (byte)0x80 : (byte)0x00);
@@ -251,7 +251,7 @@ namespace LedgerWallet
 		}
 		public async Task<Transaction> SignTransactionAsync(KeyPath keyPath, ICoin[] signedCoins, Transaction[] parents, Transaction transaction, KeyPath changePath = null)
 		{
-			List<SignatureRequest> requests = new List<SignatureRequest>();
+			var requests = new List<SignatureRequest>();
 			foreach(var c in signedCoins)
 			{
 				var tx = parents.FirstOrDefault(t => t.GetHash() == c.Outpoint.Hash);
@@ -276,13 +276,13 @@ namespace LedgerWallet
 
 			var segwitMode = segwitCoins != 0;
 
-			Dictionary<OutPoint, SignatureRequest> requests = signatureRequests
+			var requests = signatureRequests
 				.ToDictionaryUnique(o => o.InputCoin.Outpoint);
 			transaction = transaction.Clone();
-			Dictionary<OutPoint, IndexedTxIn> inputsByOutpoint = transaction.Inputs.AsIndexedInputs().ToDictionary(i => i.PrevOut);
-			Dictionary<OutPoint, ICoin> coinsByOutpoint = requests.ToDictionary(o => o.Key, o => o.Value.InputCoin);
+			var inputsByOutpoint = transaction.Inputs.AsIndexedInputs().ToDictionary(i => i.PrevOut);
+			var coinsByOutpoint = requests.ToDictionary(o => o.Key, o => o.Value.InputCoin);
 
-			List<Task<TrustedInput>> trustedInputsAsync = new List<Task<TrustedInput>>();
+			var trustedInputsAsync = new List<Task<TrustedInput>>();
 			if(!segwitMode)
 			{
 				foreach(var sigRequest in signatureRequests)
@@ -292,7 +292,7 @@ namespace LedgerWallet
 			}
 
 			var noPubKeyRequests = signatureRequests.Where(r => r.PubKey == null).ToArray();
-			List<Task<GetWalletPubKeyResponse>> getPubKeys = new List<Task<GetWalletPubKeyResponse>>();
+			var getPubKeys = new List<Task<GetWalletPubKeyResponse>>();
 			foreach(var previousReq in noPubKeyRequests)
 			{
 				getPubKeys.Add(GetWalletPubKeyAsync(previousReq.KeyPath, cancellation: cancellation));
@@ -300,18 +300,18 @@ namespace LedgerWallet
 			await Task.WhenAll(getPubKeys).ConfigureAwait(false);
 			await Task.WhenAll(trustedInputsAsync).ConfigureAwait(false);
 
-			for(int i = 0; i < noPubKeyRequests.Length; i++)
+			for(var i = 0; i < noPubKeyRequests.Length; i++)
 			{
 				noPubKeyRequests[i].PubKey = getPubKeys[i].Result.UncompressedPublicKey.Compress();
 			}
 
 			var trustedInputs = trustedInputsAsync.Select(t => t.Result).ToDictionaryUnique(i => i.OutPoint);
-			List<byte[]> apdus = new List<byte[]>();
-			InputStartType inputStartType = segwitMode ? InputStartType.NewSegwit : InputStartType.New;
+			var apdus = new List<byte[]>();
+			var inputStartType = segwitMode ? InputStartType.NewSegwit : InputStartType.New;
 
 
-			bool segwitParsedOnce = false;
-			for(int i = 0; i < signatureRequests.Length; i++)
+			var segwitParsedOnce = false;
+			for(var i = 0; i < signatureRequests.Length; i++)
 			{
 				var sigRequest = signatureRequests[i];
 				var input = inputsByOutpoint[sigRequest.InputCoin.Outpoint];
@@ -336,9 +336,9 @@ namespace LedgerWallet
 
 			if(signatureRequests.Length != signatures.Length)
 				throw new LedgerWalletException("failed to sign some inputs");
-			int sigIndex = 0;
+			var sigIndex = 0;
 
-			TransactionBuilder builder = new TransactionBuilder();
+			var builder = new TransactionBuilder();
 			foreach(var sigRequest in signatureRequests)
 			{
 				var input = inputsByOutpoint[sigRequest.InputCoin.Outpoint];
@@ -379,8 +379,8 @@ namespace LedgerWallet
 
 		public byte[] UntrustedHashSign(KeyPath keyPath, UserPin pin, LockTime lockTime, SigHash sigHashType)
 		{
-			MemoryStream data = new MemoryStream();
-			byte[] path = Serializer.Serialize(keyPath);
+			var data = new MemoryStream();
+			var path = Serializer.Serialize(keyPath);
 			BufferUtils.WriteBuffer(data, path);
 
 			var pinBytes = pin == null ? new byte[0] : pin.ToBytes();

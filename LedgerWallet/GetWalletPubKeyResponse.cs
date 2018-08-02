@@ -8,7 +8,7 @@ namespace LedgerWallet
 	{
 		public GetWalletPubKeyResponse(byte[] bytes)
 		{
-			MemoryStream ms = new MemoryStream(bytes);
+			var ms = new MemoryStream(bytes);
 			var len = ms.ReadByte();
 			UncompressedPublicKey = new PubKey(ms.ReadBytes(len));
 			len = ms.ReadByte();

@@ -88,7 +88,7 @@ namespace LedgerWallet.Transports
         {
             if(apdus == null || apdus.Length == 0)
                 return null;
-            List<byte[]> resultList = new List<byte[]>();
+            var resultList = new List<byte[]>();
             var lastAPDU = apdus.Last();
 
             await _SemaphoreSlim.WaitAsync();
@@ -114,9 +114,9 @@ namespace LedgerWallet.Transports
 
         protected async Task<byte[]> ReadAsync(CancellationToken cancellation)
         {
-            MemoryStream response = new MemoryStream();
-            int remaining = 0;
-            int sequenceIdx = 0;
+            var response = new MemoryStream();
+            var remaining = 0;
+            var sequenceIdx = 0;
             try
             {
 
@@ -139,7 +139,7 @@ namespace LedgerWallet.Transports
 
         protected async Task<byte[]> WriteAsync(byte[] apdu, CancellationToken cancellation)
         {
-            int sequenceIdx = 0;
+            var sequenceIdx = 0;
             byte[] packet = null;
             var apduStream = new MemoryStream(apdu);
             do

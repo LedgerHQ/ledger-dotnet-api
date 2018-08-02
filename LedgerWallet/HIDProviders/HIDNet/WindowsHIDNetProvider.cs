@@ -15,7 +15,7 @@ namespace LedgerWallet.HIDProviders.HIDNet
 
         public Task<IEnumerable<HIDDeviceInformation>> EnumerateDeviceDescriptions(IEnumerable<VendorProductIds> vendorProductIds, UsageSpecification[] acceptedUsages)
         {
-            List<DeviceInformation> devices = new List<DeviceInformation>();
+            var devices = new List<DeviceInformation>();
 
             var collection = WindowsHidDevice.GetConnectedDeviceInformations();
 

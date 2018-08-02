@@ -120,7 +120,7 @@ namespace LedgerWallet.U2F
 
 		public byte[] ToBytes()
 		{
-			MemoryStream ms = new MemoryStream(1 + 4 + Signature.Length);
+			var ms = new MemoryStream(1 + 4 + Signature.Length);
 			ms.WriteByte(UserPresenceByte);
 			ms.Write(Utils.ToBytes(Counter, false), 0, 4);
 			ms.Write(Signature, 0, Signature.Length);
@@ -132,7 +132,7 @@ namespace LedgerWallet.U2F
 	{
 		public U2FRegistrationResponse(byte[] bytes)
 		{
-			int offset = 1;
+			var offset = 1;
 			var pubkey = new byte[65];
 			Array.Copy(bytes, offset, pubkey, 0, pubkey.Length);
 			offset += pubkey.Length;
@@ -253,7 +253,7 @@ namespace LedgerWallet.U2F
 				cancellationToken.ThrowIfCancellationRequested();
 				try
 				{
-					MemoryStream apduStream = new MemoryStream();
+					var apduStream = new MemoryStream();
 					apduStream.WriteByte(0);
 					apduStream.WriteByte(ins);
 					apduStream.WriteByte(p1);
@@ -276,7 +276,7 @@ namespace LedgerWallet.U2F
 
 		protected Task<APDUResponse> ExchangeApduNoDataLength(byte cla, byte ins, byte p1, byte p2, byte[] data, CancellationToken cancellation)
 		{
-			byte[] apdu = new byte[data.Length + 5];
+			var apdu = new byte[data.Length + 5];
 			apdu[0] = cla;
 			apdu[1] = ins;
 			apdu[2] = p1;

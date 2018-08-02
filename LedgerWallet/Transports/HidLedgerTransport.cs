@@ -40,8 +40,8 @@ namespace LedgerWallet.Transports
 
 		protected override byte[] WrapCommandAPDU(Stream command, ref int sequenceIdx)
 		{
-			MemoryStream output = new MemoryStream();
-			int position = (int)output.Position;
+			var output = new MemoryStream();
+			var position = (int)output.Position;
 			output.WriteByte((byte)((DEFAULT_LEDGER_CHANNEL >> 8) & 0xff));
 			output.WriteByte((byte)(DEFAULT_LEDGER_CHANNEL & 0xff));
 			output.WriteByte((byte)TAG_APDU);
@@ -54,7 +54,7 @@ namespace LedgerWallet.Transports
 			}
 			sequenceIdx++;
 			var headerSize = (int)(output.Position - position);
-			int blockSize = Math.Min(LEDGER_HID_PACKET_SIZE - headerSize, (int)command.Length - (int)command.Position);
+			var blockSize = Math.Min(LEDGER_HID_PACKET_SIZE - headerSize, (int)command.Length - (int)command.Position);
 
 			var commantPart = command.ReadBytes(blockSize);
 			output.Write(commantPart, 0, commantPart.Length);
@@ -65,9 +65,9 @@ namespace LedgerWallet.Transports
 
 		protected override byte[] UnwrapReponseAPDU(byte[] data, ref int sequenceIdx, ref int remaining)
 		{
-			MemoryStream output = new MemoryStream();
-			MemoryStream input = new MemoryStream(data);
-			int position = (int)input.Position;
+			var output = new MemoryStream();
+			var input = new MemoryStream(data);
+			var position = (int)input.Position;
 			var channel = input.ReadBytes(2);
 			if(input.ReadByte() != TAG_APDU)
 				return null;
@@ -85,7 +85,7 @@ namespace LedgerWallet.Transports
 			var headerSize = input.Position - position;
 			var blockSize = (int)Math.Min(remaining, LEDGER_HID_PACKET_SIZE - headerSize);
 
-			byte[] commandPart = new byte[blockSize];
+			var commandPart = new byte[blockSize];
 			if(input.Read(commandPart, 0, commandPart.Length) != commandPart.Length)
 				return null;
 			output.Write(commandPart, 0, commandPart.Length);

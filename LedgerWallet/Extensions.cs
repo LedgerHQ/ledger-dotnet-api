@@ -32,7 +32,7 @@ namespace LedgerWallet
         }
         public static Dictionary<TKey, TValue> ToDictionaryUnique<TKey, TValue>(this IEnumerable<TValue> v, Func<TValue, TKey> selectKey)
 		{
-			Dictionary<TKey, TValue> dico = new Dictionary<TKey, TValue>();
+			var dico = new Dictionary<TKey, TValue>();
 			foreach(var value in v)
 			{
 				var k = selectKey(value);

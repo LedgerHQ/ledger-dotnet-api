@@ -30,7 +30,7 @@ namespace LedgerWallet
 
 		protected byte[] CreateAPDU(byte cla, byte ins, byte p1, byte p2, byte[] data)
 		{
-			byte[] apdu = new byte[data.Length + 5];
+			var apdu = new byte[data.Length + 5];
 			apdu[0] = cla;
 			apdu[1] = ins;
 			apdu[2] = p1;
@@ -42,12 +42,12 @@ namespace LedgerWallet
 
 		protected byte[][] CreateAPDUSplit(byte cla, byte ins, byte p1, byte p2, byte[] data)
 		{
-			int offset = 0;
-			List<byte[]> result = new List<byte[]>();
+			var offset = 0;
+			var result = new List<byte[]>();
 			while(offset < data.Length)
 			{
-				int blockLength = ((data.Length - offset) > 255 ? 255 : data.Length - offset);
-				byte[] apdu = new byte[blockLength + 5];
+				var blockLength = ((data.Length - offset) > 255 ? 255 : data.Length - offset);
+				var apdu = new byte[blockLength + 5];
 				apdu[0] = cla;
 				apdu[1] = ins;
 				apdu[2] = p1;
@@ -62,14 +62,14 @@ namespace LedgerWallet
 
 		protected byte[][] CreateApduSplit2(byte cla, byte ins, byte p1, byte p2, byte[] data, byte[] data2)
 		{
-			int offset = 0;
-			int maxBlockSize = 255 - data2.Length;
-			List<byte[]> apdus = new List<byte[]>();
+			var offset = 0;
+			var maxBlockSize = 255 - data2.Length;
+			var apdus = new List<byte[]>();
 			while(offset < data.Length)
 			{
-				int blockLength = ((data.Length - offset) > maxBlockSize ? maxBlockSize : data.Length - offset);
+				var blockLength = ((data.Length - offset) > maxBlockSize ? maxBlockSize : data.Length - offset);
 				var lastBlock = ((offset + blockLength) == data.Length);
-				byte[] apdu = new byte[blockLength + 5 + (lastBlock ? data2.Length : 0)];
+				var apdu = new byte[blockLength + 5 + (lastBlock ? data2.Length : 0)];
 				apdu[0] = cla;
 				apdu[1] = ins;
 				apdu[2] = p1;
@@ -150,7 +150,7 @@ namespace LedgerWallet
 
 		protected Task<byte[]> ExchangeSingleAPDUAsync(byte cla, byte ins, byte p1, byte p2, int length, int[] acceptedSW, CancellationToken cancellation)
 		{
-			byte[] apdu = new byte[]
+			var apdu = new byte[]
 			{
 				cla,ins,p1,p2,(byte)length
 			};
@@ -177,19 +177,19 @@ namespace LedgerWallet
 		}
 		protected async Task<APDUResponse[]> ExchangeAsync(byte[][] apdus, CancellationToken cancellation)
 		{
-			byte[][] responses = await Transport.Exchange(apdus, cancellation).ConfigureAwait(false);
-			List<APDUResponse> resultResponses = new List<APDUResponse>();
+			var responses = await Transport.Exchange(apdus, cancellation).ConfigureAwait(false);
+			var resultResponses = new List<APDUResponse>();
 			foreach(var response in responses)
 			{
 				if(response.Length < 2)
 				{
 					throw new LedgerWalletException("Truncated response");
 				}
-				int sw = ((int)(response[response.Length - 2] & 0xff) << 8) |
+				var sw = ((int)(response[response.Length - 2] & 0xff) << 8) |
 						(int)(response[response.Length - 1] & 0xff);
 				if(sw == 0x6faa)
 					Throw(sw);
-				byte[] result = new byte[response.Length - 2];
+				var result = new byte[response.Length - 2];
 				Array.Copy(response, 0, result, 0, response.Length - 2);
 				resultResponses.Add(new APDUResponse() { Response = result, SW = sw });
 			}

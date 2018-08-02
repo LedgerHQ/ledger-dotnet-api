@@ -30,21 +30,21 @@ namespace LedgerWallet
 
             if(stream.Serializing)
             {
-                uint256 txId = OutPoint.Hash;
+                var txId = OutPoint.Hash;
                 stream.ReadWrite(ref txId);
-                uint index = OutPoint.N;
+                var index = OutPoint.N;
                 stream.ReadWrite(ref index);
             }
             else
             {
-                uint256 txId = new uint256();
+                var txId = new uint256();
                 stream.ReadWrite(ref txId);
                 uint index = 0;
                 stream.ReadWrite(ref index);
                 OutPoint = new OutPoint(txId, index);
             }
 
-            ulong amount = stream.Serializing ? (ulong)_Amount.Satoshi : 0;
+            var amount = stream.Serializing ? (ulong)_Amount.Satoshi : 0;
             stream.ReadWrite(ref amount);
             _Amount = Money.Satoshis(amount);
 

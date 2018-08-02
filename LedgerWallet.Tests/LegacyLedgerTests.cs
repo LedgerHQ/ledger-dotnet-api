@@ -83,7 +83,7 @@ namespace LedgerWallet.Tests
 		[Trait("Manual", "Manual")]
 		public async Task ResetLedger()
 		{
-			for(int i = 0; i < 3; i++)
+			for(var i = 0; i < 3; i++)
 			{
 				var ledger = GetLedger();
 				await ledger.VerifyPinAsync("1121");
