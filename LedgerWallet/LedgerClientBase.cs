@@ -34,7 +34,7 @@ namespace LedgerWallet
 		{
 			if(transport == null)
 				throw new ArgumentNullException("transport");
-			this._Transport = transport;
+			_Transport = transport;
 		}
 
 		protected byte[] CreateAPDU(byte cla, byte ins, byte p1, byte p2, byte[] data)

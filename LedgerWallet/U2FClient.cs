@@ -222,7 +222,7 @@ namespace LedgerWallet.U2F
 			Array.Copy(challenge, 0, data, 0, 32);
 			Array.Copy(applicationId.GetBytes(true), 0, data, 32, 32);
 
-			var result = await this.ExchangeApdu(INS_ENROLL, 0x03, 0x00, data, cancellationToken).ConfigureAwait(false);
+			var result = await ExchangeApdu(INS_ENROLL, 0x03, 0x00, data, cancellationToken).ConfigureAwait(false);
 			return new U2FRegistrationResponse(result);
 		}
 
@@ -244,7 +244,7 @@ namespace LedgerWallet.U2F
 			Array.Copy(applicationId.GetBytes(true), 0, data, 32, 32);
 			data[64] = (byte)keyHandle.Length;
 			Array.Copy(keyHandle.GetBytes(true), 0, data, 65, keyHandle.Length);
-			var result = await this.ExchangeApdu(INS_SIGN, 0x03, 0x00, data, cancellationToken).ConfigureAwait(false);
+			var result = await ExchangeApdu(INS_SIGN, 0x03, 0x00, data, cancellationToken).ConfigureAwait(false);
 			return new U2FAuthenticationResponse(result);
 		}
 
