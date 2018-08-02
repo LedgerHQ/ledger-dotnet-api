@@ -6,7 +6,7 @@ namespace LedgerWallet
 {
 	public class LedgerEncodedKey
     {
-        byte[] _Key;
+	    readonly byte[] _Key;
         public LedgerEncodedKey(byte[] key)
         {
             if(key == null)

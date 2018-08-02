@@ -6,7 +6,7 @@ namespace LedgerWallet
 {
 	public class Bip32EncodedKey
     {
-        byte[] _Key;
+	    readonly byte[] _Key;
         public Bip32EncodedKey(byte[] bytes)
         {
             if(bytes == null)

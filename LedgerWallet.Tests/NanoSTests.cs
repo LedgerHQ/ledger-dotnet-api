@@ -106,7 +106,7 @@ namespace LedgerWallet.Tests
             Assert.NotNull(signed);
         }
 
-        Network network = Network.Main;
+	    readonly Network network = Network.Main;
 
         [Fact]
         [Trait("Manual", "Manual")]

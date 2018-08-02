@@ -176,7 +176,8 @@ namespace LedgerWallet
 		{
 			_Bytes = bytes.ToArray();
 		}
-		byte[] _Bytes;
+
+		readonly byte[] _Bytes;
 		public byte[] ToBytes()
 		{
 			return _Bytes.ToArray();

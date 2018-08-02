@@ -63,7 +63,7 @@ namespace LedgerWallet.Transports
 		byte cmd = 0x03;
 		const byte CMD_APDU = 0x03;
 		const byte CMD_INIT = 0x06;
-		byte[] cid = new byte[] { 0xff, 0xff, 0xff, 0xff };
+		readonly byte[] cid = new byte[] { 0xff, 0xff, 0xff, 0xff };
 		const byte TYPE_INIT = 0x80;
 		const int HID_RPT_SIZE = 64;
 		const int U2F_HID_PACKET_SIZE = 64;
@@ -124,7 +124,7 @@ namespace LedgerWallet.Transports
 			}
 		}
 
-		static UsageSpecification[] _UsageSpecification = new[] { new UsageSpecification(0xf1d0, 0x01) };
+		static readonly UsageSpecification[] _UsageSpecification = new[] { new UsageSpecification(0xf1d0, 0x01) };
 
 		public static Task<IEnumerable<HIDU2FTransport>> GetHIDTransportsAsync(IEnumerable<VendorProductIds> ids = null, CancellationToken cancellation = default(CancellationToken))
 		{

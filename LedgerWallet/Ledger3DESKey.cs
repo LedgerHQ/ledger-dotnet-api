@@ -10,7 +10,7 @@ namespace LedgerWallet
 	/// </summary>
 	public class Ledger3DESKey
     {
-        byte[] _Key;
+	    readonly byte[] _Key;
         public Ledger3DESKey(string hex)
             : this(Encoders.Hex.DecodeData(hex))
         {

@@ -6,7 +6,7 @@ namespace LedgerWallet.HIDProviders.HIDNet
 {
 	public class WindowsHIDNetDevice : HIDNetDevice
     {
-        Hid.Net.WindowsHidDevice _Windows;
+	    readonly Hid.Net.WindowsHidDevice _Windows;
         public WindowsHIDNetDevice(Hid.Net.DeviceInformation deviceInfo) : base(deviceInfo, new Hid.Net.WindowsHidDevice(deviceInfo)
         {
             DataHasExtraByte = true

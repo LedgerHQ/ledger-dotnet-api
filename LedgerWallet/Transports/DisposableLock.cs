@@ -7,7 +7,7 @@ namespace LedgerWallet.Transports
 	{
 		class ReleaseLockDisposable : IDisposable
 		{
-			object l;
+			readonly object l;
 			public ReleaseLockDisposable(object l)
 			{
 				this.l = l;
@@ -18,7 +18,8 @@ namespace LedgerWallet.Transports
 				Monitor.Exit(l);
 			}
 		}
-		object l = new object();
+
+		readonly object l = new object();
 		public IDisposable Lock()
 		{
 			return new ReleaseLockDisposable(l);
