@@ -9,6 +9,8 @@ namespace LedgerWallet
 
         public const byte LedgerWallet_ADM_CLA = 208;
 
+        public const byte LedgerWallet_BTCHIP_INS_GET_COIN_VER = 22;
+
         public const byte LedgerWallet_INS_SETUP = 32;
 
         public const byte LedgerWallet_INS_VERIFY_PIN = 34;
