@@ -1,11 +1,8 @@
 ﻿using LedgerWallet.U2F;
-using NBitcoin;
 using NBitcoin.DataEncoders;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
@@ -25,7 +22,7 @@ namespace LedgerWallet.Tests
 
 			// Refuse registration
 			Debugger.Break();
-			CancellationTokenSource cts = new CancellationTokenSource();
+			var cts = new CancellationTokenSource();
 			cts.CancelAfter(5000);
 			await Assert.ThrowsAsync<OperationCanceledException>(async () => await u2f.RegisterAsync(challenge, appId, cts.Token));
 

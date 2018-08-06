@@ -1,24 +1,17 @@
-﻿using LedgerWallet.Transports;
-using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace LedgerWallet.HIDProviders.HIDNet
 {
-    public abstract class HIDNetDevice : IHIDDevice
+	public abstract class HIDNetDevice : IHIDDevice
     {
         internal readonly Hid.Net.IHidDevice _Device;
         internal readonly Hid.Net.DeviceInformation _DeviceInformation;
         public HIDNetDevice(Hid.Net.DeviceInformation deviceInformation, Hid.Net.IHidDevice hid)
         {
-            if(hid == null)
-                throw new ArgumentNullException(nameof(hid));
-            if(deviceInformation == null)
-                throw new ArgumentNullException(nameof(deviceInformation));
-            _Device = hid;
-            _DeviceInformation = deviceInformation;
+			_Device = hid ?? throw new ArgumentNullException(nameof(hid));
+            _DeviceInformation = deviceInformation ?? throw new ArgumentNullException(nameof(deviceInformation));
         }
 
         public string DevicePath => _DeviceInformation.DevicePath;

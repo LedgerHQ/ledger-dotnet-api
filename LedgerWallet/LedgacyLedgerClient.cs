@@ -139,7 +139,7 @@ namespace LedgerWallet
 
 		internal byte[] ToBytes()
 		{
-			MemoryStream ms = new MemoryStream();
+			var ms = new MemoryStream();
 			ms.WriteByte((byte)OperationMode);
 			ms.WriteByte((byte)DongleFeatures);
 			ms.WriteByte(AcceptedP2PKHVersion);
@@ -176,7 +176,8 @@ namespace LedgerWallet
 		{
 			_Bytes = bytes.ToArray();
 		}
-		byte[] _Bytes;
+
+		readonly byte[] _Bytes;
 		public byte[] ToBytes()
 		{
 			return _Bytes.ToArray();

@@ -1,17 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Hid.Net;
-using LedgerWallet.Transports;
 
 namespace LedgerWallet.HIDProviders.HIDNet
 {
-    public class WindowsHIDNetDevice : HIDNetDevice
+	public class WindowsHIDNetDevice : HIDNetDevice
     {
-        Hid.Net.WindowsHidDevice _Windows;
+	    readonly Hid.Net.WindowsHidDevice _Windows;
         public WindowsHIDNetDevice(Hid.Net.DeviceInformation deviceInfo) : base(deviceInfo, new Hid.Net.WindowsHidDevice(deviceInfo)
         {
             DataHasExtraByte = true

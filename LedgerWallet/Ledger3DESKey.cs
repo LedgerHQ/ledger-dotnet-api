@@ -1,19 +1,16 @@
 ﻿using NBitcoin.DataEncoders;
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace LedgerWallet
 {
 
-    /// <summary>
-    /// 3DES-2 private key
-    /// </summary>
-    public class Ledger3DESKey
+	/// <summary>
+	/// 3DES-2 private key
+	/// </summary>
+	public class Ledger3DESKey
     {
-        byte[] _Key;
+	    readonly byte[] _Key;
         public Ledger3DESKey(string hex)
             : this(Encoders.Hex.DecodeData(hex))
         {

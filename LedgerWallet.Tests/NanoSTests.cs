@@ -1,20 +1,13 @@
-﻿using LedgerWallet.Transports;
-using LedgerWallet.U2F;
-using NBitcoin;
-using NBitcoin.DataEncoders;
-using System;
+﻿using NBitcoin;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
 
 
 namespace LedgerWallet.Tests
 {
-    [Trait("NanoS", "NanoS")]
+	[Trait("NanoS", "NanoS")]
     public class NanoSTests
     {
 
@@ -25,7 +18,7 @@ namespace LedgerWallet.Tests
 
             var tasks = new List<Task>();
 
-            for(int i = 0; i < 50; i++)
+            for(var i = 0; i < 50; i++)
             {
                 tasks.Add(ledger.GetWalletPubKeyAsync(new KeyPath("1'/0")));
                 tasks.Add(ledger.GetFirmwareVersionAsync());
@@ -71,7 +64,7 @@ namespace LedgerWallet.Tests
             var response = await ledger.GetWalletPubKeyAsync(new KeyPath("1'/1"));
             var changeAddress = response.GetAddress(network);
 
-            Transaction funding = network.Consensus.ConsensusFactory.CreateTransaction();
+            var funding = network.Consensus.ConsensusFactory.CreateTransaction();
             funding.AddInput(Network.Main.GetGenesis().Transactions[0].Inputs[0]);
             funding.Outputs.Add(new TxOut(Money.Coins(1.1m), address));
             funding.Outputs.Add(new TxOut(Money.Coins(1.0m), address));
@@ -121,7 +114,7 @@ namespace LedgerWallet.Tests
             Assert.NotNull(signed);
         }
 
-        Network network = Network.Main;
+	    readonly Network network = Network.Main;
 
         [Fact]
         [Trait("Manual", "Manual")]
@@ -135,7 +128,7 @@ namespace LedgerWallet.Tests
             var walletPubKey2 = await ledger.GetWalletPubKeyAsync(new KeyPath("1'/1"));
             var changeAddress = walletPubKey2.GetAddress(network);
 
-            Transaction funding = network.Consensus.ConsensusFactory.CreateTransaction();
+            var funding = network.Consensus.ConsensusFactory.CreateTransaction();
             funding.AddInput(network.GetGenesis().Transactions[0].Inputs[0]);
             funding.Outputs.Add(new TxOut(Money.Coins(1.1m), address));
             funding.Outputs.Add(new TxOut(Money.Coins(1.0m), address));

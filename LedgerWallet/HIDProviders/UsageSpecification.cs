@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace LedgerWallet.HIDProviders
+﻿namespace LedgerWallet.HIDProviders
 {
-    public class UsageSpecification
+	public class UsageSpecification
     {
         public UsageSpecification(ushort usagePage, ushort usage)
         {
@@ -15,12 +11,10 @@ namespace LedgerWallet.HIDProviders
         public ushort Usage
         {
             get;
-            private set;
         }
         public ushort UsagePage
         {
             get;
-            private set;
         }
     }
 }

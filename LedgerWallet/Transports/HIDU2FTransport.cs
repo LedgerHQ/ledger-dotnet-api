@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.IO;
 using NBitcoin;
@@ -15,18 +14,9 @@ namespace LedgerWallet.Transports
 	{
 		public U2FException(byte errorCode) : base(GetErrorMessage(errorCode))
 		{
-			_U2FError = errorCode;
+			U2FError = errorCode;
 		}
-
-
-		private readonly byte _U2FError;
-		public byte U2FError
-		{
-			get
-			{
-				return _U2FError;
-			}
-		}
+		public byte U2FError { get; }
 
 		const int ERR_NONE = 0;
 		const int ERR_INVALID_CMD = 1;
@@ -73,7 +63,7 @@ namespace LedgerWallet.Transports
 		byte cmd = 0x03;
 		const byte CMD_APDU = 0x03;
 		const byte CMD_INIT = 0x06;
-		byte[] cid = new byte[] { 0xff, 0xff, 0xff, 0xff };
+		readonly byte[] cid = new byte[] { 0xff, 0xff, 0xff, 0xff };
 		const byte TYPE_INIT = 0x80;
 		const int HID_RPT_SIZE = 64;
 		const int U2F_HID_PACKET_SIZE = 64;
@@ -134,7 +124,7 @@ namespace LedgerWallet.Transports
 			}
 		}
 
-		static UsageSpecification[] _UsageSpecification = new[] { new UsageSpecification(0xf1d0, 0x01) };
+		static readonly UsageSpecification[] _UsageSpecification = new[] { new UsageSpecification(0xf1d0, 0x01) };
 
 		public static Task<IEnumerable<HIDU2FTransport>> GetHIDTransportsAsync(IEnumerable<VendorProductIds> ids = null, CancellationToken cancellation = default(CancellationToken))
 		{
@@ -144,8 +134,8 @@ namespace LedgerWallet.Transports
 
 		protected override byte[] WrapCommandAPDU(Stream command, ref int sequenceIdx)
 		{
-			MemoryStream output = new MemoryStream();
-			int position = (int)output.Position;
+			var output = new MemoryStream();
+			var position = (int)output.Position;
 			output.Write(cid, 0, cid.Length);
 			if(sequenceIdx == 0)
 			{
@@ -158,7 +148,7 @@ namespace LedgerWallet.Transports
 				output.WriteByte((byte)((sequenceIdx - 1) & 0x7f));
 			}
 			var headerSize = (int)(output.Position - position);
-			int blockSize = Math.Min(U2F_HID_PACKET_SIZE - headerSize, (int)command.Length - (int)command.Position);
+			var blockSize = Math.Min(U2F_HID_PACKET_SIZE - headerSize, (int)command.Length - (int)command.Position);
 			var commantPart = command.ReadBytes(blockSize);
 			output.Write(commantPart, 0, commantPart.Length);
 			while((output.Length % U2F_HID_PACKET_SIZE) != 0)
@@ -170,9 +160,9 @@ namespace LedgerWallet.Transports
 
 		protected override byte[] UnwrapReponseAPDU(byte[] data, ref int sequenceIdx, ref int remaining)
 		{
-			MemoryStream output = new MemoryStream();
-			MemoryStream input = new MemoryStream(data);
-			int position = (int)input.Position;
+			var output = new MemoryStream();
+			var input = new MemoryStream(data);
+			var position = (int)input.Position;
 			if(!input.ReadBytes(cid.Length).SequenceEqual(cid))
 				return null;
 			var cmd = input.ReadByte();
@@ -192,7 +182,7 @@ namespace LedgerWallet.Transports
 				return null;
 			var headerSize = input.Position - position;
 			var blockSize = (int)Math.Min(remaining, U2F_HID_PACKET_SIZE - headerSize);
-			byte[] commandPart = new byte[blockSize];
+			var commandPart = new byte[blockSize];
 			if(input.Read(commandPart, 0, commandPart.Length) != commandPart.Length)
 				return null;
 			output.Write(commandPart, 0, commandPart.Length);

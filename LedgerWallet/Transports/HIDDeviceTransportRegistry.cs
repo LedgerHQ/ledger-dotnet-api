@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -10,7 +9,7 @@ namespace LedgerWallet.Transports
 {
 	public class HIDDeviceTransportRegistry<T> where T : HIDTransportBase
 	{
-		Func<IHIDDevice, T> create;
+		readonly Func<IHIDDevice, T> create;
 		public HIDDeviceTransportRegistry(Func<IHIDDevice, T> create)
 		{
 			this.create = create;
@@ -30,7 +29,7 @@ namespace LedgerWallet.Transports
 		}
 
 
-		Dictionary<string, T> _TransportsByDevicePath = new Dictionary<string, T>();
+		readonly Dictionary<string, T> _TransportsByDevicePath = new Dictionary<string, T>();
         protected SemaphoreSlim _Lock = new SemaphoreSlim(1, 1);
 
         private async Task<T> GetTransportAsync(IHIDProvider provider, HIDDeviceInformation device, CancellationToken cancellation)

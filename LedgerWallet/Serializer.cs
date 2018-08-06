@@ -1,21 +1,16 @@
 ﻿using NBitcoin;
-using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace LedgerWallet
 {
-    class Serializer
+	class Serializer
     {
         public static byte[] Serialize(KeyPath keyPath)
         {
             Guard.AssertKeyPath(keyPath);
-            MemoryStream ms = new MemoryStream();
+            var ms = new MemoryStream();
             ms.WriteByte((byte)keyPath.Indexes.Length);
-            for(int i = 0; i < keyPath.Indexes.Length; i++)
+            for(var i = 0; i < keyPath.Indexes.Length; i++)
             {
                 var bytes = ToBytes(keyPath.Indexes[i], false);
                 ms.Write(bytes, 0, bytes.Length);

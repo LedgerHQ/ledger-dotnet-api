@@ -1,10 +1,6 @@
 ﻿using NBitcoin;
-using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace LedgerWallet
 {
@@ -12,7 +8,7 @@ namespace LedgerWallet
 	{
 		public GetWalletPubKeyResponse(byte[] bytes)
 		{
-			MemoryStream ms = new MemoryStream(bytes);
+			var ms = new MemoryStream(bytes);
 			var len = ms.ReadByte();
 			UncompressedPublicKey = new PubKey(ms.ReadBytes(len));
 			len = ms.ReadByte();

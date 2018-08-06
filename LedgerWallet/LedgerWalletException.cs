@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace LedgerWallet
 {
@@ -26,35 +22,18 @@ namespace LedgerWallet
 		public LedgerWalletException(string message, LedgerWalletStatus sw)
 			: base(message)
 		{
-			if(sw == null)
-				throw new ArgumentNullException("sw");
-			_Status = sw;
+			Status = sw ?? throw new ArgumentNullException("sw");
 		}
-
-		private readonly LedgerWalletStatus _Status;
-		public LedgerWalletStatus Status
-		{
-			get
-			{
-				return _Status;
-			}
-		}
+		public LedgerWalletStatus Status { get; }
 	}
 
 	public class LedgerWalletStatus
 	{
 		public LedgerWalletStatus(int sw)
 		{
-			_SW = sw;
+			SW = sw;
 		}
-		private readonly int _SW;
-		public int SW
-		{
-			get
-			{
-				return _SW;
-			}
-		}
+		public int SW { get; }
 
 		public WellKnownSW KnownSW
 		{
@@ -68,8 +47,8 @@ namespace LedgerWallet
 		{
 			get
 			{
-				if((_SW & 0xFF00) == 0x6F00)
-					return _SW & 0x00FF;
+				if((SW & 0xFF00) == 0x6F00)
+					return SW & 0x00FF;
 				return 0;
 			}
 		}

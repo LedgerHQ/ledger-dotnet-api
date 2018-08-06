@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace LedgerWallet.HIDProviders
+﻿namespace LedgerWallet.HIDProviders
 {
-    public class VendorProductIds
+	public class VendorProductIds
     {
         public VendorProductIds(int vendorId)
         {
@@ -17,11 +13,11 @@ namespace LedgerWallet.HIDProviders
         }
         public int VendorId
         {
-            get; set;
+            get;
         }
         public int? ProductId
         {
-            get; set;
+            get;
         }
     }
 }

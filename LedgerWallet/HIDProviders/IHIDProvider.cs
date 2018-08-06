@@ -1,13 +1,10 @@
-﻿using LedgerWallet.Transports;
-using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace LedgerWallet.HIDProviders
 {
-    public interface IHIDProvider
+	public interface IHIDProvider
     {
         Task<IEnumerable<HIDDeviceInformation>> EnumerateDeviceDescriptions(IEnumerable<VendorProductIds> vendorProductIds, UsageSpecification[] acceptedUsages);
         IHIDDevice CreateFromDescription(HIDDeviceInformation decription);

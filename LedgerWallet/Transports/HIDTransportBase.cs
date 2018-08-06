@@ -1,27 +1,22 @@
 ﻿using LedgerWallet.HIDProviders;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace LedgerWallet.Transports
 {
-    
-    public abstract class HIDTransportBase : ILedgerTransport
+
+	public abstract class HIDTransportBase : ILedgerTransport
     {
         internal IHIDDevice _Device;
         readonly VendorProductIds _VendorProductIds;
 
         protected HIDTransportBase(IHIDDevice device, UsageSpecification[] acceptedUsageSpecifications)
         {
-            if(device == null)
-                throw new ArgumentNullException(nameof(device));
-            _Device = device;
+			_Device = device ?? throw new ArgumentNullException(nameof(device));
 
             _VendorProductIds = new VendorProductIds(device.VendorId, device.ProductId);
             _AcceptedUsageSpecifications = acceptedUsageSpecifications;
@@ -93,7 +88,7 @@ namespace LedgerWallet.Transports
         {
             if(apdus == null || apdus.Length == 0)
                 return null;
-            List<byte[]> resultList = new List<byte[]>();
+            var resultList = new List<byte[]>();
             var lastAPDU = apdus.Last();
 
             await _SemaphoreSlim.WaitAsync();
@@ -119,9 +114,9 @@ namespace LedgerWallet.Transports
 
         protected async Task<byte[]> ReadAsync(CancellationToken cancellation)
         {
-            MemoryStream response = new MemoryStream();
-            int remaining = 0;
-            int sequenceIdx = 0;
+            var response = new MemoryStream();
+            var remaining = 0;
+            var sequenceIdx = 0;
             try
             {
 
@@ -144,7 +139,7 @@ namespace LedgerWallet.Transports
 
         protected async Task<byte[]> WriteAsync(byte[] apdu, CancellationToken cancellation)
         {
-            int sequenceIdx = 0;
+            var sequenceIdx = 0;
             byte[] packet = null;
             var apduStream = new MemoryStream(apdu);
             do

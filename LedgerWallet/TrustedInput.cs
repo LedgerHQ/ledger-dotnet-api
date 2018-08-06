@@ -1,14 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using NBitcoin;
 
 namespace LedgerWallet
 {
-    public class TrustedInput
+	public class TrustedInput
     {
 
         public TrustedInput(byte[] response)
@@ -34,21 +30,21 @@ namespace LedgerWallet
 
             if(stream.Serializing)
             {
-                uint256 txId = OutPoint.Hash;
+                var txId = OutPoint.Hash;
                 stream.ReadWrite(ref txId);
-                uint index = OutPoint.N;
+                var index = OutPoint.N;
                 stream.ReadWrite(ref index);
             }
             else
             {
-                uint256 txId = new uint256();
+                var txId = new uint256();
                 stream.ReadWrite(ref txId);
                 uint index = 0;
                 stream.ReadWrite(ref index);
-                _OutPoint = new OutPoint(txId, index);
+                OutPoint = new OutPoint(txId, index);
             }
 
-            ulong amount = stream.Serializing ? (ulong)_Amount.Satoshi : 0;
+            var amount = stream.Serializing ? (ulong)_Amount.Satoshi : 0;
             stream.ReadWrite(ref amount);
             _Amount = Money.Satoshis(amount);
 
@@ -71,17 +67,9 @@ namespace LedgerWallet
                 return _Nonce;
             }
         }
+		public OutPoint OutPoint { get; private set; }
 
-        private OutPoint _OutPoint;
-        public OutPoint OutPoint
-        {
-            get
-            {
-                return _OutPoint;
-            }
-        }
-
-        private Money _Amount;
+		private Money _Amount;
         public Money Amount
         {
             get

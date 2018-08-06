@@ -1,14 +1,8 @@
 ﻿using LedgerWallet.HIDProviders;
-using LedgerWallet.Transports;
-using Microsoft.Win32.SafeHandles;
 using NBitcoin;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -34,7 +28,7 @@ namespace LedgerWallet.Transports
 			_Registry = new HIDDeviceTransportRegistry<HIDLedgerTransport>((d) => new HIDLedgerTransport(d));
 		}
 
-		static UsageSpecification[] _UsageSpecification = new[] { new UsageSpecification(0xffa0, 0x01) };
+		static readonly UsageSpecification[] _UsageSpecification = new[] { new UsageSpecification(0xffa0, 0x01) };
 		public static Task<IEnumerable<HIDLedgerTransport>> GetHIDTransportsAsync(IEnumerable<VendorProductIds> ids = null, CancellationToken cancellation = default(CancellationToken))
 		{
 			ids = ids ?? WellKnownLedgerWallets;
@@ -46,11 +40,11 @@ namespace LedgerWallet.Transports
 
 		protected override byte[] WrapCommandAPDU(Stream command, ref int sequenceIdx)
 		{
-			MemoryStream output = new MemoryStream();
-			int position = (int)output.Position;
-			output.WriteByte((byte)((DEFAULT_LEDGER_CHANNEL >> 8) & 0xff));
-			output.WriteByte((byte)(DEFAULT_LEDGER_CHANNEL & 0xff));
-			output.WriteByte((byte)TAG_APDU);
+			var output = new MemoryStream();
+			var position = (int)output.Position;
+			output.WriteByte((DEFAULT_LEDGER_CHANNEL >> 8) & 0xff);
+			output.WriteByte(DEFAULT_LEDGER_CHANNEL & 0xff);
+			output.WriteByte(TAG_APDU);
 			output.WriteByte((byte)((sequenceIdx >> 8) & 0xff));
 			output.WriteByte((byte)(sequenceIdx & 0xff));
 			if(sequenceIdx == 0)
@@ -60,7 +54,7 @@ namespace LedgerWallet.Transports
 			}
 			sequenceIdx++;
 			var headerSize = (int)(output.Position - position);
-			int blockSize = Math.Min(LEDGER_HID_PACKET_SIZE - headerSize, (int)command.Length - (int)command.Position);
+			var blockSize = Math.Min(LEDGER_HID_PACKET_SIZE - headerSize, (int)command.Length - (int)command.Position);
 
 			var commantPart = command.ReadBytes(blockSize);
 			output.Write(commantPart, 0, commantPart.Length);
@@ -71,9 +65,9 @@ namespace LedgerWallet.Transports
 
 		protected override byte[] UnwrapReponseAPDU(byte[] data, ref int sequenceIdx, ref int remaining)
 		{
-			MemoryStream output = new MemoryStream();
-			MemoryStream input = new MemoryStream(data);
-			int position = (int)input.Position;
+			var output = new MemoryStream();
+			var input = new MemoryStream(data);
+			var position = (int)input.Position;
 			var channel = input.ReadBytes(2);
 			if(input.ReadByte() != TAG_APDU)
 				return null;
@@ -91,7 +85,7 @@ namespace LedgerWallet.Transports
 			var headerSize = input.Position - position;
 			var blockSize = (int)Math.Min(remaining, LEDGER_HID_PACKET_SIZE - headerSize);
 
-			byte[] commandPart = new byte[blockSize];
+			var commandPart = new byte[blockSize];
 			if(input.Read(commandPart, 0, commandPart.Length) != commandPart.Length)
 				return null;
 			output.Write(commandPart, 0, commandPart.Length);
