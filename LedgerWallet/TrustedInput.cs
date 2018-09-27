@@ -6,14 +6,13 @@ namespace LedgerWallet
 {
 	public class TrustedInput
     {
-
         public TrustedInput(byte[] response)
         {
             var stream = new BitcoinStream(new MemoryStream(response), false);
             ReadWrite(stream);
         }
 
-        private void ReadWrite(BitcoinStream stream)
+        void ReadWrite(BitcoinStream stream)
         {
             if(stream.Serializing)
             {

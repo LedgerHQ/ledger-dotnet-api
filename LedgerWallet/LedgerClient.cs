@@ -109,49 +109,55 @@ namespace LedgerWallet
 		}
 
 		public async Task<TrustedInput> GetTrustedInputAsync(Transaction transaction, int outputIndex, CancellationToken cancellation = default(CancellationToken))
-		{
-			if(outputIndex >= transaction.Outputs.Count)
-				throw new ArgumentOutOfRangeException("outputIndex is bigger than the number of outputs in the transaction", "outputIndex");
-			var apdus = new List<byte[]>();
-			var data = new MemoryStream();
-			// Header
-			BufferUtils.WriteUint32BE(data, outputIndex);
-			BufferUtils.WriteBuffer(data, transaction.Version);
-			VarintUtils.write(data, transaction.Inputs.Count);
-			apdus.Add(CreateAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_TRUSTED_INPUT, 0x00, 0x00, data.ToArray()));
-			// Each input
-			foreach(var input in transaction.Inputs)
-			{
-				data = new MemoryStream();
-				BufferUtils.WriteBuffer(data, input.PrevOut);
-				VarintUtils.write(data, input.ScriptSig.Length);
-				apdus.Add(CreateAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_TRUSTED_INPUT, 0x80, 0x00, data.ToArray()));
-				data = new MemoryStream();
-				BufferUtils.WriteBuffer(data, input.ScriptSig.ToBytes());
-				apdus.AddRange(CreateApduSplit2(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_TRUSTED_INPUT, 0x80, 0x00, data.ToArray(), Utils.ToBytes(input.Sequence, true)));
-			}
-			// Number of outputs
-			data = new MemoryStream();
-			VarintUtils.write(data, transaction.Outputs.Count);
-			apdus.Add(CreateAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_TRUSTED_INPUT, 0x80, 0x00, data.ToArray()));
-			// Each output
-			foreach(var output in transaction.Outputs)
-			{
-				data = new MemoryStream();
-				BufferUtils.WriteBuffer(data, Utils.ToBytes((ulong)output.Value.Satoshi, true));
-				VarintUtils.write(data, output.ScriptPubKey.Length);
-				apdus.Add(CreateAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_TRUSTED_INPUT, 0x80, 0x00, data.ToArray()));
-				data = new MemoryStream();
-				BufferUtils.WriteBuffer(data, output.ScriptPubKey.ToBytes());
-				apdus.AddRange(CreateAPDUSplit(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_TRUSTED_INPUT, 0x80, 0x00, data.ToArray()));
-			}
-			// Locktime
-			apdus.Add(CreateAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_TRUSTED_INPUT, 0x80, 0x00, transaction.LockTime.ToBytes()));
-			var response = await ExchangeApdusAsync(apdus.ToArray(), OK, cancellation).ConfigureAwait(false);
-			return new TrustedInput(response);
-		}
+        {
+            List<byte[]> apdus = GetTrustedInputAPDUs(transaction, outputIndex);
+            var response = await ExchangeApdusAsync(apdus.ToArray(), OK, cancellation).ConfigureAwait(false);
+            return new TrustedInput(response);
+        }
 
-		public enum InputStartType
+        private List<byte[]> GetTrustedInputAPDUs(Transaction transaction, int outputIndex)
+        {
+            if (outputIndex >= transaction.Outputs.Count)
+                throw new ArgumentOutOfRangeException("outputIndex is bigger than the number of outputs in the transaction", "outputIndex");
+            var apdus = new List<byte[]>();
+            var data = new MemoryStream();
+            // Header
+            BufferUtils.WriteUint32BE(data, outputIndex);
+            BufferUtils.WriteBuffer(data, transaction.Version);
+            VarintUtils.write(data, transaction.Inputs.Count);
+            apdus.Add(CreateAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_TRUSTED_INPUT, 0x00, 0x00, data.ToArray()));
+            // Each input
+            foreach (var input in transaction.Inputs)
+            {
+                data = new MemoryStream();
+                BufferUtils.WriteBuffer(data, input.PrevOut);
+                VarintUtils.write(data, input.ScriptSig.Length);
+                apdus.Add(CreateAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_TRUSTED_INPUT, 0x80, 0x00, data.ToArray()));
+                data = new MemoryStream();
+                BufferUtils.WriteBuffer(data, input.ScriptSig.ToBytes());
+                apdus.AddRange(CreateApduSplit2(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_TRUSTED_INPUT, 0x80, 0x00, data.ToArray(), Utils.ToBytes(input.Sequence, true)));
+            }
+            // Number of outputs
+            data = new MemoryStream();
+            VarintUtils.write(data, transaction.Outputs.Count);
+            apdus.Add(CreateAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_TRUSTED_INPUT, 0x80, 0x00, data.ToArray()));
+            // Each output
+            foreach (var output in transaction.Outputs)
+            {
+                data = new MemoryStream();
+                BufferUtils.WriteBuffer(data, Utils.ToBytes((ulong)output.Value.Satoshi, true));
+                VarintUtils.write(data, output.ScriptPubKey.Length);
+                apdus.Add(CreateAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_TRUSTED_INPUT, 0x80, 0x00, data.ToArray()));
+                data = new MemoryStream();
+                BufferUtils.WriteBuffer(data, output.ScriptPubKey.ToBytes());
+                apdus.AddRange(CreateAPDUSplit(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_TRUSTED_INPUT, 0x80, 0x00, data.ToArray()));
+            }
+            // Locktime
+            apdus.Add(CreateAPDU(LedgerWalletConstants.LedgerWallet_CLA, LedgerWalletConstants.LedgerWallet_INS_GET_TRUSTED_INPUT, 0x80, 0x00, transaction.LockTime.ToBytes()));
+            return apdus;
+        }
+
+        public enum InputStartType
 		{
 			New = 0x00,
 			NewSegwit = 0x02,
@@ -288,14 +294,22 @@ namespace LedgerWallet
 			var inputsByOutpoint = transaction.Inputs.AsIndexedInputs().ToDictionary(i => i.PrevOut);
 			var coinsByOutpoint = requests.ToDictionary(o => o.Key, o => o.Value.InputCoin);
 
-			var trustedInputsAsync = new List<Task<TrustedInput>>();
+			var trustedInputs = new List<TrustedInput>();
 			if(!segwitMode)
 			{
-				foreach(var sigRequest in signatureRequests)
+                List<byte[]> trustedInputApdus = new List<byte[]>();
+                foreach (var sigRequest in signatureRequests)
 				{
-					trustedInputsAsync.Add(GetTrustedInputAsync(sigRequest.InputTransaction, (int)sigRequest.InputCoin.Outpoint.N, cancellation));
+                    trustedInputApdus.AddRange(GetTrustedInputAPDUs(sigRequest.InputTransaction, (int)sigRequest.InputCoin.Outpoint.N));
 				}
-			}
+                var trustedInputApdusResponses = await ExchangeAsync(trustedInputApdus.ToArray(), cancellation).ConfigureAwait(false);
+                foreach(var trustedInputApdusResponse in trustedInputApdusResponses)
+                {
+                    CheckSW(OK, trustedInputApdusResponse.SW);
+                    if(trustedInputApdusResponse.Response.Length != 0)
+                        trustedInputs.Add(new TrustedInput(trustedInputApdusResponse.Response));
+                }
+            }
 
 			var noPubKeyRequests = signatureRequests.Where(r => r.PubKey == null).ToArray();
 			var getPubKeys = new List<Task<GetWalletPubKeyResponse>>();
@@ -304,14 +318,13 @@ namespace LedgerWallet
 				getPubKeys.Add(GetWalletPubKeyAsync(previousReq.KeyPath, cancellation: cancellation));
 			}
 			await Task.WhenAll(getPubKeys).ConfigureAwait(false);
-			await Task.WhenAll(trustedInputsAsync).ConfigureAwait(false);
 
 			for(var i = 0; i < noPubKeyRequests.Length; i++)
 			{
 				noPubKeyRequests[i].PubKey = getPubKeys[i].Result.UncompressedPublicKey.Compress();
 			}
 
-			var trustedInputs = trustedInputsAsync.Select(t => t.Result).ToDictionaryUnique(i => i.OutPoint);
+			var trustedInputsByOutpoint = trustedInputs.ToDictionaryUnique(i => i.OutPoint);
 			var apdus = new List<byte[]>();
 			var inputStartType = segwitMode ? InputStartType.NewSegwit : InputStartType.New;
 
@@ -321,7 +334,7 @@ namespace LedgerWallet
 			{
 				var sigRequest = signatureRequests[i];
 				var input = inputsByOutpoint[sigRequest.InputCoin.Outpoint];
-				apdus.AddRange(UntrustedHashTransactionInputStart(inputStartType, input, trustedInputs, coinsByOutpoint, segwitMode, segwitParsedOnce));
+				apdus.AddRange(UntrustedHashTransactionInputStart(inputStartType, input, trustedInputsByOutpoint, coinsByOutpoint, segwitMode, segwitParsedOnce));
 				inputStartType = InputStartType.Continue;
 				if(!segwitMode || !segwitParsedOnce)
 					apdus.AddRange(UntrustedHashTransactionInputFinalizeFull(changePath, transaction.Outputs));
