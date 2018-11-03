@@ -20,7 +20,8 @@ namespace LedgerWallet
 	}
 	public abstract class LedgerClientBase
 	{
-		public static int[] OK = new[] { LedgerWalletConstants.SW_OK };
+        public int MaxAPDUSize { get; set; } = 260;
+        public static int[] OK = new[] { LedgerWalletConstants.SW_OK };
 		public ILedgerTransport Transport { get; }
 
 		public LedgerClientBase(ILedgerTransport transport)
@@ -46,7 +47,7 @@ namespace LedgerWallet
 			var result = new List<byte[]>();
 			while(offset < data.Length)
 			{
-				var blockLength = ((data.Length - offset) > 255 ? 255 : data.Length - offset);
+				var blockLength = Math.Min(data.Length - offset, MaxAPDUSize - 5);
 				var apdu = new byte[blockLength + 5];
 				apdu[0] = cla;
 				apdu[1] = ins;
@@ -63,7 +64,7 @@ namespace LedgerWallet
 		protected byte[][] CreateApduSplit2(byte cla, byte ins, byte p1, byte p2, byte[] data, byte[] data2)
 		{
 			var offset = 0;
-			var maxBlockSize = 255 - data2.Length;
+			var maxBlockSize = MaxAPDUSize - 5 - data2.Length;
 			var apdus = new List<byte[]>();
 			while(offset < data.Length)
 			{
