@@ -65,7 +65,7 @@ namespace LedgerWallet.Tests
             var changeAddress = response.GetAddress(network);
 
             var funding = network.Consensus.ConsensusFactory.CreateTransaction();
-            funding.AddInput(Network.Main.GetGenesis().Transactions[0].Inputs[0]);
+            funding.Inputs.Add(Network.Main.GetGenesis().Transactions[0].Inputs[0]);
             funding.Outputs.Add(new TxOut(Money.Coins(1.1m), address));
             funding.Outputs.Add(new TxOut(Money.Coins(1.0m), address));
             funding.Outputs.Add(new TxOut(Money.Coins(1.2m), address));
@@ -129,7 +129,7 @@ namespace LedgerWallet.Tests
             var changeAddress = walletPubKey2.GetAddress(network);
 
             var funding = network.Consensus.ConsensusFactory.CreateTransaction();
-            funding.AddInput(network.GetGenesis().Transactions[0].Inputs[0]);
+            funding.Inputs.Add(network.GetGenesis().Transactions[0].Inputs[0]);
             funding.Outputs.Add(new TxOut(Money.Coins(1.1m), address));
             funding.Outputs.Add(new TxOut(Money.Coins(1.0m), address));
             funding.Outputs.Add(new TxOut(Money.Coins(1.2m), address));

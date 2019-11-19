@@ -278,6 +278,7 @@ namespace LedgerWallet
 			return await SignTransactionAsync(requests.ToArray(), transaction, changePath: changePath);
 		}
 
+		public Network Network { get; set; }
 		public async Task<Transaction> SignTransactionAsync(SignatureRequest[] signatureRequests, Transaction transaction, KeyPath changePath = null, CancellationToken cancellation = default(CancellationToken))
 		{
 			if(signatureRequests.Length == 0)
@@ -357,14 +358,14 @@ namespace LedgerWallet
 				throw new LedgerWalletException("failed to sign some inputs");
 			var sigIndex = 0;
 
-			var builder = new TransactionBuilder();
+			var builder = (Network ?? Network.Main).CreateTransactionBuilder();
 			foreach(var sigRequest in signatureRequests)
 			{
 				var input = inputsByOutpoint[sigRequest.InputCoin.Outpoint];
 				if(input == null)
 					continue;
 				builder.AddCoins(sigRequest.InputCoin);
-				builder.AddKnownSignature(sigRequest.PubKey, signatures[sigIndex]);
+				builder.AddKnownSignature(sigRequest.PubKey, signatures[sigIndex], sigRequest.InputCoin.Outpoint);
 				sigIndex++;
 			}
 			builder.SignTransactionInPlace(transaction);
